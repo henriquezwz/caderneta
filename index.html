@@ -695,7 +695,27 @@ const catNome = id => id==="__rec" ? "Receita" : (catById(id)?.nome || "Sem cate
 const catGrupo = id => catById(id)?.grupo || "outros";
 /* previsto do mês */
 const itensDoMes = m => (S.cfg.fixos||[]).filter(f => !f.soMes || f.soMes===m);
-const previsto = (f, m) => { const o = S.cfg.planos?.[m]?.[f.id]; return o!=null ? +o : (+f.valor||0); };
+/* previsto: o que você definiu para o mês; senão, o que foi pago no mês anterior; senão, o previsto do mês anterior */
+let idxPago = {ref:null, n:-1, map:{}};
+function pagoFixo(fid, mm){
+  if (idxPago.ref!==S.lanc || idxPago.n!==S.lanc.size){ const map = {}; for (const d of S.lanc.values()) if (d.fixo && d.tipo==="gasto") map[d.fixo+"|"+d.mes] = (map[d.fixo+"|"+d.mes]||0) + d.valor; idxPago = {ref:S.lanc, n:S.lanc.size, map}; }
+  const v = idxPago.map[fid+"|"+mm]; return v==null ? null : v;
+}
+function previsto(f, m, prof){
+  prof = prof||0;
+  const o = S.cfg.planos?.[m]?.[f.id];
+  if (o!=null && (prof===0 || +o>0)) return +o;
+  if (f.soMes || prof>=12) return +f.valor||0;
+  const ant = addMes(m,-1);
+  const pago = pagoFixo(f.id, ant); if (pago!=null) return r2(pago);
+  return previsto(f, ant, prof+1);
+}
+function origemPrevisto(f, m){
+  const o = S.cfg.planos?.[m]?.[f.id]; if (o!=null) return "definido para este mês";
+  const ant = addMes(m,-1); if (pagoFixo(f.id, ant)!=null) return "base: pago em " + MES[+ant.slice(5)-1];
+  const o2 = S.cfg.planos?.[ant]?.[f.id]; if (o2!=null && +o2>0) return "base: previsto de " + MES[+ant.slice(5)-1];
+  return "valor padrão";
+}
 const SINONIMOS = {energia:["luz","cemig","energia","eletrica"], agua:["agua","copasa","saae"], internet:["internet","wifi","fibra"], aluguel:["aluguel"], gasolina:["gasolina","posto","combustivel"], mercado:["mercado","supermercado","compras"]};
 function acharItemPrevisto(desc, m){
   const n = norm(desc); if (!n) return null;
@@ -1076,7 +1096,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 17:00";
+const VERSAO = "12/10 17:10";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1302,10 +1322,10 @@ function folhaPlanejar(m){
   const sugs = Object.entries(freq).filter(([k,v])=>v.n>=3 && v.v>0 && !jaTem.has(norm(k))).sort((a,b)=>b[1].n-a[1].n).slice(0,14);
   const catOpt = `<option value="">Categoria automática</option>`+S.cfg.cats.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join("");
   abrirFolha(`<h3>Previsto de ${mesLongo(m)}</h3>
-    <p class="lead">Ajuste o valor de cada item para este mês. A mudança vale só para ${mesLongo(m)}; o valor padrão continua o mesmo nos outros meses.</p>
+    <p class="lead">Cada mês começa com o que você pagou no mês anterior. Ajuste o que mudou: vale para ${mesLongo(m)} e vira a base do mês seguinte.</p>
     <div class="btns" style="margin:0 0 10px"><button type="button" class="btn" data-act="planCopiar">Usar os valores pagos em ${MES[+ant.slice(5)-1]}</button></div>
     <div class="plan-lista">${itens.map(f=>{ const pa = pagoEm(f, ant), ap = naPlanilha(f.nome, anoPassado) ?? pagoEm(f, anoPassado);
-      return `<div class="plan-row" style="--cc:${corCat(f.cat)}"><span class="dot"></span><div class="pl-nm">${esc(f.nome)}<small>${[pa!=null?`${MES[+ant.slice(5)-1]}: ${fm0(pa)}`:"", ap!=null?`${MES[+anoPassado.slice(5)-1]}/${anoPassado.slice(2,4)}: ${fm0(ap)}`:""].filter(Boolean).join(" · ") || esc(catNome(f.cat))}</small></div>
+      return `<div class="plan-row" style="--cc:${corCat(f.cat)}"><span class="dot"></span><div class="pl-nm">${esc(f.nome)}<small>${[esc(origemPrevisto(f,m)), pa!=null?`pago em ${MES[+ant.slice(5)-1]}: ${fm0(pa)}`:"", ap!=null?`${MES[+anoPassado.slice(5)-1]}/${anoPassado.slice(2,4)}: ${fm0(ap)}`:""].filter(Boolean).join(" · ")}</small></div>
         <input class="n" inputmode="decimal" data-plan="${f.id}" value="${previsto(f,m)?BRL.format(previsto(f,m)):""}" placeholder="0,00" aria-label="Previsto de ${esc(f.nome)}"><button type="button" class="x" data-act="planTirar:${f.id}" aria-label="Tirar deste mês">✕</button></div>`; }).join("") || `<p class="note">Nenhum item ainda. Use as sugestões abaixo ou adicione.</p>`}</div>
     <div class="prev-sum" style="margin-top:8px"><div>Total previsto <b id="planTot">${fm(sum(itens,f=>previsto(f,m)))}</b></div></div>
     ${sugs.length?`<div class="an-sec"><h4>Da sua planilha antiga (toque para adicionar)</h4><div class="sugs">${sugs.map(([k,v])=>`<button type="button" class="chip" data-act="planAdd:${esc(k.replace(/\|/g," "))}|${v.v}|${categorizar(k)||""}">＋ ${esc(k)} · ${fm0(v.v)}</button>`).join("")}</div></div>`:""}
