@@ -488,6 +488,13 @@ main{max-width:1120px;margin:18px auto 0}
 .novacat button{border:0;border-radius:8px;padding:0 12px;font-weight:700;background:var(--blue);color:#fff;cursor:pointer}.novacat button.x{background:var(--line);color:var(--ink)}
 .conv-app{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:5px solid var(--tang);border-radius:14px;padding:12px 14px;box-shadow:0 12px 30px -12px rgba(20,27,52,.35);font-size:14px;max-width:520px;margin:0 auto}
 .conv-app span{flex:1 1 220px}.conv-app button{border:0;border-radius:10px;padding:9px 14px;font-weight:700;background:var(--tang);color:#fff;cursor:pointer}.conv-app button.x{background:none;color:var(--muted);padding:9px 6px}
+.ph-min{display:flex;width:100%;justify-content:space-between;align-items:center;text-align:left;cursor:pointer;color:var(--ink);font:inherit}.ph-min span:first-child{display:grid;gap:2px}.ph-min small{color:var(--muted);font-size:12.5px}.ph-chev{font-size:18px;color:var(--tang)}
+.ph-hb{display:flex;gap:10px;align-items:center}.ph-fechar{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;width:30px;height:28px;cursor:pointer;font-size:14px}
+.sep-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.sep-top div{background:var(--surface-2,var(--blue-soft));border-radius:12px;padding:10px}.sep-top small{display:block;color:var(--muted);font-size:12px}.sep-top b{font-size:17px}.sep-top .neg b{color:var(--danger)}.sep-top .pos b{color:var(--mint)}
+.sep-l{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:10px 2px;text-align:left;color:var(--ink);font:inherit;cursor:pointer}.sep-l.ok .sep-n{text-decoration:line-through;color:var(--muted)}
+.ins-l{display:grid;gap:10px}.ins-i{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 12px;border-radius:12px;background:var(--violet-soft)}.ins-i.alerta{background:var(--danger-soft)}.ins-i.elogio{background:var(--mint-soft)}.ins-i.projecao{background:var(--blue-soft)}
+.ins-ic{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;background:var(--surface);font-weight:800}.ins-i p{margin:3px 0 0;font-size:13.5px}.ins-i small{display:block;margin-top:4px;font-weight:600}
+.ac-conf{display:grid;gap:3px;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--blue-soft);font-size:13px}
 .ac-ed{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 0 4px 12px}.ac-ed input{flex:1 1 160px;min-width:0;padding:7px 10px;border:1.5px solid var(--line);border-radius:8px;font:600 15px var(--f-ui);background:var(--surface);color:var(--ink)}.ac-ed input:focus{border-color:var(--blue)}.ac-ed .note{flex-basis:100%;margin:0;font-size:11.5px;order:3}
 .aj-link.danger{color:var(--danger)}
 .pl-nome{width:100%;border:0;border-bottom:1.5px dashed transparent;background:none;font:600 15px var(--f-ui);color:var(--ink);padding:2px 0}.pl-nome:hover,.pl-nome:focus{border-bottom-color:var(--blue);outline:0}
@@ -772,7 +779,7 @@ function origemPrevisto(f, m){
   const o2 = S.cfg.planos?.[ant]?.[f.id]; if (o2!=null && +o2>0) return "base: previsto de " + MES[+ant.slice(5)-1];
   return "valor padrão";
 }
-const SINONIMOS = {energia:["luz","cemig","energia","eletrica"], agua:["agua","copasa","saae"], internet:["internet","wifi","fibra"], aluguel:["aluguel"], gasolina:["gasolina","posto","combustivel"], mercado:["mercado","supermercado","compras"]};
+const SINONIMOS = {energia:["luz","cemig","energia","eletrica"], cemig:["cemig","luz","energia"], agua:["agua","copasa","saae"], saae:["saae","agua"], copasa:["copasa","agua"], internet:["internet","wifi","fibra"], aluguel:["aluguel"], gasolina:["gasolina","posto","combustivel"], mercado:["mercado","supermercado","compras"]};
 function acharItemPrevisto(desc, m, soPlanejados){
   const n = norm(desc); if (!n) return null;
   const pagos = new Set([...S.lanc.values()].filter(d=>d.mes===m && d.fixo).map(d=>d.fixo));
@@ -859,7 +866,9 @@ function parseLinha(raw){
   const notif = parseNotificacao(line); if (notif) return finalizar(notif);
   let t = line;
   const {data, resto} = dataDoTexto(t); t = resto;
-  let explicitCat = null;
+  let explicitCat = null, tagItem = null;
+  t = t.replace(/(^|\s)\+([A-Za-zÀ-ú][\wÀ-ú-]*)/g, (a,sp,w)=>{ tagItem = w; return " "; });
+  t = t.replace(/#([\wÀ-ú-]+)/g, (a,w)=>{ if (!S.cfg.cats.some(c=>norm(c.nome).startsWith(norm(w))||c.id===norm(w))) { tagItem = w; return " "; } return a; });
   t = t.replace(/#([\wÀ-ú-]+)/g,(a,b)=>{ const n = norm(b); const c = S.cfg.cats.find(c=>norm(c.nome).startsWith(n)||c.id===n); if(c) explicitCat=c.id; return ""; });
   let parcelas = 1, porParcela = false;
   const px = t.match(/\b(\d{1,2})\s*[x×]\s*(?:de\s*)?(?:r\$\s*)?([\d.]+,\d{1,2}|\d+(?:\.\d{1,2})?)?/i);
@@ -894,10 +903,26 @@ function parseLinha(raw){
   if (tipo==="receita"){ cat = "__rec";
     if (fonteRec){ rec = fonteRec.id; desc = fonteRec.nome; }
     else desc = desc ? titulo(desc.replace(/^(o|a|um|uma)\s+/i,"")) : "Receita"; }
-  else { cat = explicitCat || categorizar(desc); if (!desc && /\b(tirei|saquei|retirei)\b/.test(l)) desc = "Saque"; desc = desc ? desc.charAt(0).toUpperCase()+desc.slice(1) : (cat ? catNome(cat) : "Gasto"); }
+  let item = null, novoItem = null;
+  if (tipo==="gasto"){
+    const its = itensDoMes(mesDe(data));
+    if (tagItem){ const f = acharItemPorNome(tagItem, its); if (f) item = f.id; else novoItem = titulo(tagItem.replace(/[-_]/g," ")); }
+    else { const r = itemNoTexto(desc, its); if (r){ item = r.f.id; desc = r.resto; } }
+  }
+  else if (tagItem) desc = (desc+" "+tagItem).trim();
+  if (tipo!=="receita") { cat = explicitCat || categorizar(desc) || (item ? (S.cfg.fixos.find(f=>f.id===item)?.cat || null) : null); if (!desc && /\b(tirei|saquei|retirei)\b/.test(l)) desc = "Saque"; if (!desc && item) desc = S.cfg.fixos.find(f=>f.id===item)?.nome || ""; if (!desc && novoItem) desc = novoItem; desc = desc ? desc.charAt(0).toUpperCase()+desc.slice(1) : (cat ? catNome(cat) : "Gasto"); }
   if (porParcela) valor = valor * parcelas;
-  return finalizar({tipo, valor:r2(valor), desc, cat, meta, rec, data, parcelas, explicito, cartao: cartao && tipo==="gasto", origem:"rapido"});
+  return finalizar({tipo, valor:r2(valor), desc, cat, meta, rec, data, parcelas, explicito, cartao: cartao && tipo==="gasto", origem:"rapido", item, novoItem});
 }
+/* acha o item do plano pelo nome digitado: "outros" → Outros (dia a dia), "saida" → Saídas */
+function acharItemPorNome(w, its){ const k = norm(w).replace(/[^a-z0-9]/g,""); if (k.length<3) return null;
+  return its.find(f=>norm(f.nome).replace(/[^a-z0-9]/g,"")===k) || its.find(f=>{ const p = norm(f.nome).split(/[^a-z0-9]+/).filter(Boolean)[0]||""; return p.length>=4 && (p===k || p.startsWith(k) || k.startsWith(p)); }) || null; }
+function itemNoTexto(desc, its){ const ws = String(desc||"").split(/\s+/).filter(Boolean); if (!ws.length) return null;
+  const envs = its.filter(f=>f.env || f.soMes);
+  for (let i = ws.length-1; i>=0; i--){ const w = norm(ws[i]).replace(/[^a-z0-9]/g,""); if (w.length<4) continue;
+    const f = envs.find(f=>{ const p = norm(f.nome).split(/[^a-z0-9]+/).filter(Boolean)[0]||""; return p.length>=4 && (p===w || (w.length>=5 && p.startsWith(w)) || (p.length>=5 && w.startsWith(p))); });
+    if (f){ const resto = ws.filter((_,j)=>j!==i).join(" ").replace(/\s+(de|do|da|no|na|em|com|pra|para|pro|nos|nas)\s*$/i,"").trim(); return {f, resto}; } }
+  return null; }
 function finalizar(p){ p.parcelas = p.parcelas||1; return p; }
 const NUM = "(?:\\d{1,3}(?:\\.\\d{3})+(?:,\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?)";
 function somarContas(t){
@@ -978,6 +1003,10 @@ const totalDe = d => +(d.valorTotal || d.valor) || 0;
 
 async function lancarParsed(p, opts={}){
   const ids = [];
+  if (p.tipo==="gasto" && p.novoItem && !p.item){ const ex = acharItemPorNome(p.novoItem, itensDoMes(mesDe(p.data)));
+    if (ex) p = Object.assign({}, p, {item: ex.id});
+    else { const id = "f"+uid(); (S.cfg.fixos ||= []).push({id, nome:p.novoItem, valor:0, dia:0, cat: p.cat || categorizar(p.novoItem) || "outros", varia:true, env:true}); salvarCfg(true); p = Object.assign({}, p, {item:id}); } }
+  if (p.tipo==="gasto" && p.item && p.origem==="rapido"){ const k = keyOf(p.desc); const f = (S.cfg.fixos||[]).find(x=>x.id===p.item); if (k && f && !(S.cfg.fixos||[]).some(x=>norm(x.nome)===norm(p.desc))){ (S.cfg.regrasItem ||= {})[k] = f.soMes ? norm(f.nome) : f.id; salvarCfg(); } }
   if (p.tipo==="gasto" && !p.fixo && !opts.id && (p.parcelas||1)===1 && p.cartao && modoFatura()){ const mm = mesDe(p.data); const f = acharItemPrevisto(p.desc, mm, true);
     if (f){ p = Object.assign({}, p, {fixo:f.id, cat:f.cat, pagoEm: mm, naFatura:false}); opts = Object.assign({}, opts, {id:`fx-${f.id}-${mm}`}); p._ligouPrevisto = f.nome; } }
   if (p.tipo==="gasto" && !p.fixo && !opts.id && (p.parcelas||1)===1 && !p.cartao){ const f = acharItemPrevisto(p.desc, mesDe(p.data)); if (f){ p = Object.assign({}, p, {fixo:f.id, cat:f.cat, desc: p.desc}); opts = Object.assign({}, opts, {id:`fx-${f.id}-${mesDe(p.data)}`}); p._ligouPrevisto = f.nome; } }
@@ -997,6 +1026,7 @@ async function lancarParsed(p, opts={}){
     if (p.tipo==="pagfatura"){ doc.fatura = p.fatura || faturaDe(p.data); doc.cat = null; doc.revisar = false; }
     if (p.nota) doc.nota = String(p.nota).slice(0,300);
     if (p.imp) doc.imp = p.imp;
+    if (p.item && p.tipo==="gasto") doc.item = p.item;
     if (n===1 && p.divide && +p.divide.valor>0 && p.tipo==="gasto"){ const parte = Math.min(+p.divide.valor, doc.valor); doc.valorTotal = doc.valor; doc.valor = r2(doc.valor - parte); doc.divide = {quem: String(p.divide.quem||"Alguém").slice(0,40), valor: r2(parte), recebido: false}; }
     if (p.fixo) doc.fixo = p.fixo;
     if (p.rec) doc.rec = p.rec;
@@ -1213,7 +1243,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 19:15";
+const VERSAO = "12/10 19:50";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1254,6 +1284,7 @@ async function garantirPlano(){
 }
 function migrarCfg(){
   garantirPlano();
+  if (S.ai && S.gotLanc && S.gotCfg && !S.visitante && !memo.get("insAuto")){ memo.set("insAuto", true); setTimeout(()=>gerarInsights(false), 2500); }
   if (!S.gotCfg || S.visitante || S.cfg.v3) return; let mudou = false;
   const pet = catById("pet"); if (pet && !/^pet/i.test(pet.nome)){ pet.nome = "Pet"; mudou = true; }
   S.cfg.v3 = true; salvarCfg(true);
@@ -1395,7 +1426,7 @@ function viewMes(){
   if (vazio && S.travou) return `<div class="grid"><div class="panel empty"><b>Seus dados não chegaram.</b>O Firebase não respondeu.${ultimoErro?`<br><small>${esc(ultimoErro.slice(0,300))}</small>`:""}<div class="btns" style="justify-content:center"><button class="btn" data-act="sair">Sair e usar sem login</button><button class="btn" onclick="location.reload()">Recarregar</button></div><p class="note">versão ${VERSAO}</p></div></div>`;
   if (vazio) return `<div class="grid"><div class="panel empty"><b>Carregando sua caderneta…</b>${S.modo==="firebase" ? "Conectando ao seu Firebase. Se passar de alguns segundos, recarregue a página." : "Se demorar, abra este link no Claude conectado à sua conta."}</div></div>`;
   const cartPanel = painelCartao(m);
-  return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${alertas}${recPanel}${painelReceber()}${metas}</div></div>`;
+  return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${painelInsights(m)}${alertas}${recPanel}${painelReceber()}${metas}</div></div>`;
 }
 function painelAcompanha(m, R){
   const MM = MES[+m.slice(5)-1], aberto = memo.get("itemAberto"), atual = mesDe(hoje());
@@ -1416,9 +1447,70 @@ function painelAcompanha(m, R){
     ${fs.length ? grupos.filter(([,xs])=>xs.length).map(([nome,xs])=>`<div class="grp"><div class="grp-h"><b>${nome}</b><span>${fm0(sum(xs,x=>x.env?x.gasto:(x.pago?(x.lanc?.valor??x.gasto):x.gasto)))} / ${fm0(sum(xs,x=>x.prev))}</span></div>${xs.map(linhaIt).join("")}</div>`).join("")
       : `<p class="note">Monte o plano do mês e cada item aparece aqui com quanto você já gastou nele.</p>`}
     ${R.AT.fora.length ? `<div class="grp"><div class="ac-it ${ab?"open":""}"><button class="env over" data-act="verItem:__fora" style="--cc:var(--muted)"><div class="env-top"><span class="env-name">Fora do plano</span><span class="env-v"><b>${fm0(R.AT.foraTot)}</b> · ${R.AT.fora.length} ${R.AT.fora.length>1?"gastos":"gasto"}</span></div></button>${ab?lista("__fora"):""}</div></div>` : ""}
+    ${(()=>{ const itensT = sum(Object.values(R.AT.porItem), v=>v), fat = R.CM ? R.CM.pagoMes : 0; return `<div class="ac-conf"><span>Gastos do mês nos itens <b>${fm0(itensT)}</b>${R.AT.foraTot?` + fora do plano <b>${fm0(R.AT.foraTot)}</b>`:""} = <b>${fm0(itensT + R.AT.foraTot)}</b></span>${fat?`<span>Fatura paga (compras do mês passado): <b>${fm0(fat)}</b> · fica fora dos itens</span>`:""}<span>Total que saiu no mês: <b>${fm0(R.saiu)}</b></span></div>`; })()}
     <p class="note" style="margin-top:10px">Toque num item para ver os gastos dele. Toque num gasto para mudar o item em que ele entra; o app aprende para as próximas vezes.</p></section>`;
 }
+function folhaSeparar(m, manter){
+  const R = resumo(m), CM = R.CM, sep = (S.cfg.separado||{})[m] || {}, MM = MES[+m.slice(5)-1];
+  const linhas = [];
+  if (CM && CM.pend>0.5) linhas.push({k:"fatura", g:"Pagar", nome:`Fatura do cartão (vence em ${MM})`, v:CM.pend});
+  for (const x of R.fixosStatus.filter(x=>!x.env && !x.pago && x.prev>0)) linhas.push({k:x.f.id, g: x.f.soMes ? "Planejados" : "Pagar", nome:x.f.nome, v:x.prev});
+  if (R.guardarPend>0.5) linhas.push({k:"guardar", g:"Guardar", nome:`Guardar em ${(S.cfg.metas||[])[0]?.nome||"poupança"}`, v:R.guardarPend});
+  for (const x of R.fixosStatus.filter(x=>x.env && x.resta>0.5)) linhas.push({k:x.f.id, g:"Dia a dia (envelopes)", nome:x.f.nome, v:x.resta});
+  const total = sum(linhas, x=>x.v), feito = sum(linhas.filter(x=>sep[x.k]), x=>x.v), tem = r2(R.receitaPrev - R.saiu - R.guardado + R.ajuste), aReceber = r2(R.receitaPrev - R.entrou), sobra = r2(tem - total);
+  const grupos = ["Pagar","Guardar","Planejados","Dia a dia (envelopes)"].filter(g=>linhas.some(x=>x.g===g));
+  memo.set("sepTexto", `Separar dinheiro de ${mesLongo(m)}\n` + grupos.map(g=>`\n${g}:\n`+linhas.filter(x=>x.g===g).map(x=>`${sep[x.k]?"✓":"•"} ${x.nome}: ${fm(x.v)}`).join("\n")).join("\n") + `\n\nTotal: ${fm(total)} · tenho ${fm(tem)} · ${sobra>=0?"sobra":"falta"} ${fm(Math.abs(sobra))}`);
+  abrirFolha(`<h3>Separar o dinheiro de ${MM}</h3>
+    <p class="lead">Quanto vai para cada lugar agora, pelo seu plano. Marque o que já separou (numa caixinha, em outra conta ou só na cabeça).</p>
+    <div class="sep-top"><div><small>${aReceber>0.5?`Você terá (com ${fm0(aReceber)} a receber)`:"Você tem agora"}</small><b>${fm0(tem)}</b></div><div><small>Para separar</small><b>${fm0(total)}</b></div><div class="${sobra<0?"neg":"pos"}"><small>${sobra>=0?"Sobra livre":"Falta"}</small><b>${fm0(Math.abs(sobra))}</b></div></div>
+    <div class="prev-bar" style="margin:8px 0 14px"><i style="width:${total?Math.min(100,feito/total*100).toFixed(1):0}%"></i></div>
+    ${grupos.map(g=>`<div class="grp"><div class="grp-h"><b>${g}</b><span>${fm0(sum(linhas.filter(x=>x.g===g),x=>x.v))}</span></div>${linhas.filter(x=>x.g===g).map(x=>`<button class="sep-l ${sep[x.k]?"ok":""}" data-act="sepTog:${m}|${x.k}"><span class="ph-tk ${sep[x.k]?"on":""}">${sep[x.k]?ck():""}</span><span class="sep-n">${esc(x.nome)}</span><b class="num">${fm(x.v)}</b></button>`).join("")}</div>`).join("") || `<p class="note">Nada pendente: tudo pago e separado.</p>`}
+    ${sobra<0?`<p class="note" style="color:var(--danger)">O que você tem não cobre tudo: faltam ${fm(-sobra)}. Comece pela fatura e pelas contas, e reduza um envelope do dia a dia.</p>`:sobra>0?`<p class="note">Sobram ${fm(sobra)} sem destino: dá para guardar mais ou reforçar um envelope.</p>`:""}
+    <div class="sheet-foot"><button type="button" class="btn" data-act="sepCopiar">Copiar lista</button><button type="button" class="btn green" data-close>Pronto</button></div>`, manter);
+}
+function contextoPlano(m){
+  const R = resumo(m), dim = diasNoMes(m), dia = m===mesDe(hoje()) ? new Date().getDate() : dim;
+  const its = R.fixosStatus.map(x=>`${x.f.nome} [${x.env?"envelope":x.f.soMes?"planejado só este mês":"conta"}]: planejado ${x.prev.toFixed(0)}, gasto ${(x.env?x.gasto:(x.pago?(x.lanc?.valor??x.gasto):x.gasto)||0).toFixed(0)}${!x.env?(x.pago?" (pago)":" (a pagar)"):""}`).join("\n");
+  const lancs = R.gastos.slice().sort((a,b)=>a.data<b.data?-1:1).map(g=>`${g.data.slice(8)}/${g.data.slice(5,7)} ${g.desc} ${g.valor.toFixed(2)} → ${(S.cfg.fixos||[]).find(f=>f.id===R.AT.de.get(g.id))?.nome||"fora do plano"}${g.cartao?" (cartão)":""}`).join("\n");
+  const hist = Object.keys(S.hist).sort().slice(-6).map(k=>`${k}: entrou ${Math.round(S.hist[k].ganhos||0)}, gastos ${Math.round(S.hist[k].gastos||0)}, guardou ${Math.round(S.hist[k].guardado||0)}; itens: ${(S.hist[k].itens||[]).map(i=>i[0]+" "+Math.round(Math.max(i[2],i[3]))).join(", ")}`).join("\n");
+  const ant = [1,2,3].map(k=>addMes(m,-k)).filter(mm=>lancDoMes(mm).length).map(mm=>{ const r = resumo(mm); return `${mm} (app): entrou ${r.entrou.toFixed(0)}, saiu ${r.saiu.toFixed(0)}, guardou ${r.guardado.toFixed(0)}; por item: ${r.fixosStatus.map(x=>x.f.nome+" "+(x.gasto||0).toFixed(0)+"/"+x.prev.toFixed(0)).join(", ")}`; }).join("\n");
+  return `Hoje: ${hoje()} (dia ${dia} de ${dim} do mês ${m}).
+Receita prevista ${R.receitaPrev.toFixed(0)}, já entrou ${R.entrou.toFixed(0)}.
+Fatura do cartão que vence no mês: ${R.CM?R.CM.devido.toFixed(0):0} (paga ${R.CM?R.CM.pagoMes.toFixed(0):0}). Compras do cartão deste mês (já contadas): ${R.CM?R.CM.adiantarTot.toFixed(0):0}.
+Guardar planejado ${R.metaMensal.toFixed(0)}, guardado ${R.guardado.toFixed(0)}. Poupança: ${(S.cfg.metas||[]).map(mt=>mt.nome+" saldo "+saldoMeta(mt).toFixed(0)+" alvo "+mt.alvo).join("; ")}.
+Sobra planejada para o dia a dia ${R.planSobra.toFixed(0)}, livre agora até o fim do mês ${R.caixaLivre.toFixed(0)}. Fora do plano: ${R.AT.foraTot.toFixed(0)}.
+ITENS DO PLANO:
+${its}
+GASTOS DO MÊS (data descrição valor → item):
+${lancs||"nenhum"}
+MESES ANTERIORES NO APP:
+${ant||"sem dados"}
+PLANILHA (últimos meses):
+${hist||"sem dados"}`;
+}
+async function gerarInsights(forcar){
+  const m = S.mes; if (!S.ai || S.visitante) return; const c = S.cfg.insights;
+  if (!forcar && c && c.m===m && c.dia===hoje()) return; if (memo.get("insBusy")) return; memo.set("insBusy", true); render();
+  try{
+    const r = await S.ai.json(`Você é um planejador financeiro pessoal brasileiro, direto, esperto e prático. Analise o mês de quem planeja assim: recebe o salário, paga a fatura do cartão (como um item só), paga as contas, separa envelopes do dia a dia (Saídas, Outros…) e planejados, e guarda o resto.
+Gere de 5 a 7 insights PROFUNDOS e ESPECÍFICOS, com números reais dos dados (nunca genéricos). Considere: ritmo de cada envelope em relação ao dia do mês e projeção até o fim; itens que vão estourar e quanto; padrões nos gastos (onde, quando, repetição, pequenos que somam); comparação com meses anteriores e com a planilha; o que dá para cortar ou remanejar entre itens (diga de qual para qual e quanto); a fatura e o cartão; a poupança e quanto tempo falta para o alvo no ritmo atual; algo que está indo bem.
+${contextoPlano(m)}
+Responda só com JSON: [{"tipo":"alerta|dica|projecao|elogio","titulo":"até 8 palavras","texto":"1 a 3 frases com números","acao":"opcional: uma ação concreta curta"}]`, null, {modelTier:"complex"});
+    const itens = (Array.isArray(r) ? r : (r.insights||r.itens||[])).filter(x=>x && x.titulo).slice(0,8);
+    if (itens.length){ S.cfg.insights = {m, dia: hoje(), itens}; salvarCfg(); }
+  }catch(e){ if (forcar) toast(S.ai.erro(e) || "A IA não respondeu agora."); }
+  memo.delete("insBusy"); render();
+}
+function painelInsights(m){
+  if (!S.ai || S.visitante) return "";
+  const c = S.cfg.insights, ok = c && c.m===m, busy = memo.get("insBusy"); const ic = {alerta:"!",dica:"✦",projecao:"↗",elogio:"✓"};
+  return `<section class="panel ins"><div class="panel-h"><h2 style="--hc:var(--violet)">Insights da IA</h2><button class="act" data-act="insights" ${busy?"disabled":""}>${busy?"Pensando…":ok?"Atualizar":"Gerar"}</button></div>
+    ${ok ? `<div class="ins-l">${c.itens.map(x=>`<div class="ins-i ${esc(x.tipo||"dica")}"><span class="ins-ic">${ic[x.tipo]||"✦"}</span><div><b>${esc(x.titulo)}</b><p>${esc(x.texto||"")}</p>${x.acao?`<small>→ ${esc(x.acao)}</small>`:""}</div></div>`).join("")}</div><p class="note">Atualizados ${c.dia===hoje()?"hoje":"em "+c.dia.slice(8)+"/"+c.dia.slice(5,7)}. Toque em Atualizar depois de lançar mais coisas.</p>`
+      : busy ? `<div class="ia-load"><span></span><p>Lendo seu mês, seu plano e seus meses anteriores…</p></div>` : `<p class="note">A IA lê seu plano, os gastos do mês e os meses anteriores e diz o que está indo bem, o que vai estourar e o que remanejar.</p>`}</section>`;
+}
+function planoAberto(m){ try{ const s = JSON.parse(localStorage.getItem("caderneta-plano")||"null"); if (!s || s.m!==m) return true; return !!s.aberto; }catch(e){ return true; } }
 function blocoPlano(m, R){
+  if (!planoAberto(m)) return `<button class="prevhero ph-min" data-act="planoAbrir:${m}" aria-expanded="false"><span><b>Plano de ${MES[+m.slice(5)-1]}</b><small>sobra ${fm0(R.planSobra)} · livre agora ${fm0(R.caixaLivre)}${R.CM&&R.CM.pend>0.5?` · fatura ${fm0(R.CM.pend)} a pagar`:""}</small></span><span class="ph-chev">▾</span></button>`;
   const MM = MES[+m.slice(5)-1], CM = R.CM, atual = mesDe(hoje());
   const contas = R.fixosStatus.filter(x=>!x.f.soMes && !x.env), plan = R.fixosStatus.filter(x=>x.f.soMes), envs = R.fixosStatus.filter(x=>x.env && !x.f.soMes);
   const linha = (nome, v, extra, cls="") => `<div class="ph-l ${cls}"><span>${nome}${extra?` <small>${extra}</small>`:""}</span><b class="num ${v<0?"neg":""}">${v<0?"−":""}${fm0(Math.abs(v))}</b></div>`;
@@ -1441,7 +1533,7 @@ function blocoPlano(m, R){
   const dia = new Date().getDate(), revisar = !semPlanilha && m===atual && dia<=12 && !(S.cfg.revisado||{})[m] && (S.cfg.fixos||[]).length;
   return `<div class="prevhero">${semPlanilha ? `<div class="ph-ini"><b>Traga sua planilha uma vez só</b><span>Escolha o arquivo <i>caderneta-backup.json</i> que te mandei. Vêm os gastos fixos, a poupança e todo o histórico. Depois, todo mês o plano já vem pronto.</span><button class="btn green" data-act="importBackup">Escolher o arquivo</button></div>` : ""}
     ${revisar ? `<div class="ph-ini rev"><b>Mês novo: revise o plano de ${MM}</b><span>Os valores vieram do mês passado. Mude o que for diferente e confirme.</span><div class="btns" style="margin:0"><button class="btn" data-act="planejar:${m}">Revisar valores</button><button class="btn green" data-act="revisadoOk:${m}">Está certo</button></div></div>` : ""}
-    <div class="ph-h"><b>Plano de ${MM}</b><button class="aj-link" data-act="planejar:${m}">revisar plano</button></div>
+    <div class="ph-h"><b>Plano de ${MM}</b><span class="ph-hb"><button class="aj-link" data-act="separar:${m}">separar dinheiro</button><button class="aj-link" data-act="planejar:${m}">revisar</button><button class="ph-fechar" data-act="planoFechar:${m}" aria-expanded="true" aria-label="Minimizar o plano" title="Minimizar">▴</button></span></div>
     ${linha("Vai entrar", R.receitaPrev, R.receitaPrev>R.entrou?`recebido ${fm0(R.entrou)}`:"tudo recebido")}
     ${cart}
     <div class="ph-sec">${linha("Contas do mês", -totContas, contas.length?`${contas.filter(x=>x.pago).length} de ${contas.length} pagas`:"nenhuma ainda")}
@@ -2306,7 +2398,8 @@ function atualizarPreview(){
   const metaSel = (p.tipo==="aporte"||p.tipo==="resgate") && (S.cfg.metas||[]).length ? `<span class="pill y"><select id="pvMeta" aria-label="Meta">${S.cfg.metas.map(m=>`<option value="${m.id}" ${p.meta===m.id?"selected":""}>${esc(m.nome)}</option>`).join("")}</select></span>` : "";
   const d = p.data===hoje() ? "hoje" : p.data.slice(8)+"/"+p.data.slice(5,7);
   const ligado = p.tipo==="gasto" && (p.parcelas||1)===1 && !p.cartao ? acharItemPrevisto(p.desc, p.data.slice(0,7)) : null;
-  pv.innerHTML = `${ligado?`<span class="pill" style="background:var(--tang-soft);color:var(--tang)">✓ ${esc(ligado.nome)} (previsto ${fm0(previsto(ligado, p.data.slice(0,7)))})</span>`:""}<span class="pill ${tipoL[1]}">${tipoL[0]}</span><span class="pill num">${p.parcelas>1?p.parcelas+"× "+fm(p.valor/p.parcelas):fm(p.valor)}</span>${catSel}${metaSel}<span class="pill">${esc(d)}</span><span class="hint">${esc(p.desc)}</span>`;
+  const itP = p.item ? (S.cfg.fixos||[]).find(f=>f.id===p.item) : null; const stP = itP ? resumo(p.data.slice(0,7)).fixosStatus.find(x=>x.f.id===itP.id) : null;
+  pv.innerHTML = `${itP?`<span class="pill" style="background:var(--blue-soft);color:var(--blue)">→ ${esc(itP.nome)}${stP?` · ${fm0((stP.gasto||0)+p.valor)} de ${fm0(stP.prev)}`:""}</span>`:p.novoItem?`<span class="pill" style="background:var(--blue-soft);color:var(--blue)">→ novo item: ${esc(p.novoItem)}</span>`:""}${ligado?`<span class="pill" style="background:var(--tang-soft);color:var(--tang)">✓ ${esc(ligado.nome)} (previsto ${fm0(previsto(ligado, p.data.slice(0,7)))})</span>`:""}<span class="pill ${tipoL[1]}">${tipoL[0]}</span><span class="pill num">${p.parcelas>1?p.parcelas+"× "+fm(p.valor/p.parcelas):fm(p.valor)}</span>${catSel}${metaSel}<span class="pill">${esc(d)}</span><span class="hint">${esc(p.desc)}</span>`;
 }
 async function lancarDaBarra(){
   const texto = $("#q").value;
@@ -2336,6 +2429,10 @@ async function lancarDaBarra(){
   const fl = p.tipo==="gasto" && !p.fixo && (p.parcelas||1)===1 && !p.cartao ? acharItemPrevisto(p.desc, mesDe(p.data)) : null;
   try{
     const ids = await lancarParsed(p);
+    if (p.tipo==="gasto" && modoFatura()){ const mm = mesEfetivo(Object.assign({}, p, {fatura: p.fatura || faturaDe(p.data)})); const R2 = resumo(mm); const iid = R2.AT.de.get(ids[0]); const x = iid && R2.fixosStatus.find(y=>y.f.id===iid);
+      if (x && !(fl && !x.env)){ const g = x.gasto||0, sob = r2(x.prev - g);
+        toast(`${fm(p.valor)} em ${x.f.nome}: ${fm0(g)} de ${fm0(x.prev)} · ${x.prev ? (sob>=0 ? `sobram ${fm0(sob)}` : `passou ${fm0(-sob)}`) : "sem valor planejado"}`, async ()=>{ for (const id of ids) await apagarLanc(id); toast("Desfeito"); }, 7000); return; }
+      if (!x && !(p.cartao && mm!==mesDe(p.data))){ toast(`${fm(p.valor)} lançado fora do plano. Toque nele no extrato para escolher o item.`, async ()=>{ for (const id of ids) await apagarLanc(id); toast("Desfeito"); }, 7000); return; } }
     toast(fl ? `${fl.nome}: ${fm(p.valor)} marcado como pago no previsto` : `${p.tipo==="receita"?"Receita":p.tipo==="aporte"?"Guardado":p.tipo==="pagfatura"?"Pagamento da fatura":"Gasto"} de ${fm(p.valor)} lançado${p.parcelas>1?" em "+p.parcelas+" parcelas":""}`, async ()=>{ for (const id of ids) await apagarLanc(id); toast("Desfeito"); });
   }catch(e){ toast("Não consegui salvar. Confira a conexão e tente de novo."); }
 }
@@ -2372,6 +2469,11 @@ async function acao(a, el){
     case "apagarItem": { if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="Toque de novo para apagar"; setTimeout(()=>{ if (el.isConnected){ el.dataset.sure=""; el.textContent="Apagar item"; } }, 3000); return; }
       const f = S.cfg.fixos.find(x=>x.id===arg); if (!f) return; const pos = S.cfg.fixos.indexOf(f); S.cfg.fixos.splice(pos,1); memo.delete("itemAberto"); salvarCfg(true);
       toast(`“${f.nome}” apagado do plano`, ()=>{ S.cfg.fixos.splice(pos,0,f); salvarCfg(true); render(); }); return; }
+    case "planoAbrir": case "planoFechar": try{ localStorage.setItem("caderneta-plano", JSON.stringify({m:arg, aberto: cmd==="planoAbrir"})); }catch(e){} render(); return;
+    case "separar": folhaSeparar(arg); return;
+    case "sepTog": { const [mm, k] = arg.split("|"); const o = ((S.cfg.separado ||= {})[mm] ||= {}); o[k] = !o[k]; salvarCfg(); folhaSeparar(mm, true); return; }
+    case "sepCopiar": { const t = memo.get("sepTexto")||""; try{ await navigator.clipboard.writeText(t); toast("Lista copiada."); }catch(e){ toast("Não consegui copiar."); } return; }
+    case "insights": gerarInsights(true); return;
     case "verItem": memo.get("itemAberto")===arg ? memo.delete("itemAberto") : memo.set("itemAberto", arg); render(); return;
     case "planVal": memo.delete("fxPlan2"); memo.set("fxPlan", arg); render(); setTimeout(()=>{ const i=$("#planVal"); i?.focus(); i?.select(); },0); return;
     case "planVal2": memo.set("fxPlan2", arg); memo.delete("fxPlan"); render(); setTimeout(()=>{ const i=$("#planVal2"); i?.focus(); i?.select(); },0); return;
