@@ -1096,7 +1096,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 17:10";
+const VERSAO = "12/10 17:20";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1287,7 +1287,7 @@ function folhaPagas(venc, manter){
     <div class="pagas-lista">${rows.map((r,i)=>`<label class="pg-row"><input type="checkbox" data-pg="${i}" ${r.on?"checked":""}><span class="dt">${r.data.slice(8)}/${r.data.slice(5,7)}</span><span class="ds">${esc(r.desc)}${r.parc?` <small>parcela ${esc(r.parc)}</small>`:""}</span><b>${fm(r.total)}</b></label>`).join("")}</div>
     <div class="pg-soma" id="pgSoma"></div>
     ${pagfat?`<p class="note">Já existe ${fm(pagfat)} registrado como pagamento avulso desta fatura.</p>`:""}
-    <div class="sheet-foot"><button type="button" class="btn" data-close>Cancelar</button><button class="btn green">Salvar</button></div></form>`);
+    <div class="sheet-foot"><button type="button" class="btn" data-close>Cancelar</button><button class="btn green">Salvar</button></div></form>`, !!document.querySelector("#layer .pagas-lista"));
   atualizarPagas();
 }
 function atualizarPagas(){
@@ -1333,7 +1333,7 @@ function folhaPlanejar(m){
       <div class="plan-novo"><input id="planNome" placeholder="Ex.: Conta de luz"><input id="planValor" class="n" inputmode="decimal" placeholder="Valor"><input id="planDia" class="n" inputmode="numeric" placeholder="Dia"><select id="planCat">${catOpt}</select></div>
       <label class="note" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="planSo"> Só em ${mesLongo(m)} (não repete)</label>
       <div class="btns"><button type="button" class="btn green" data-act="planNovo">Adicionar</button></div></div>
-    <div class="sheet-foot"><button type="button" class="btn green" data-close>Pronto</button></div>`);
+    <div class="sheet-foot"><button type="button" class="btn green" data-close>Pronto</button></div>`, !!document.querySelector("#layer .plan-lista"));
 }
 function painelReceber(){
   const L = [...S.lanc.entries()].filter(([,d])=>d.divide && !d.divide.recebido);
@@ -1544,7 +1544,13 @@ function viewAjustes(){
 }
 
 /* ---------- folha (modal) ---------- */
-function abrirFolha(html){ $("#layer").innerHTML = `<div class="sheet-bg" data-close><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`; const f = $("#layer").querySelector("input,select,button"); f && f.focus(); }
+function abrirFolha(html, manterRolagem){
+  const antes = manterRolagem ? ($("#layer .sheet")?.scrollTop || 0) : 0;
+  $("#layer").innerHTML = `<div class="sheet-bg" data-close><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  const sh = $("#layer .sheet");
+  if (manterRolagem && sh){ sh.scrollTop = antes; }
+  else { const f = $("#layer").querySelector("input,select,button"); f && f.focus({preventScroll:true}); }
+}
 function fecharFolha(){ $("#layer").innerHTML = ""; }
 
 function folhaEditar(id){
@@ -1630,7 +1636,7 @@ function folhaLote(rows, titulo, nota, venc, manter){
           <label>Comentário<input type="text" data-lote="${i}.nota" value="${esc(r.nota||"")}" placeholder="opcional"></label>
           <div class="lc-2"><label>Alguém te paga uma parte?<input type="text" data-lote="${i}.quem" value="${esc(r.quem||"")}" placeholder="quem"></label><label>Quanto<input type="text" inputmode="decimal" data-lote="${i}.parte" value="${+r.parte?BRL.format(r.parte):""}" placeholder="0,00"></label></div>
         </div></div>`; }).join("")}</div>
-    <div class="sheet-foot lote-foot"><div id="loteResumo" class="note"></div><div class="btns" style="margin:0;justify-content:flex-end"><button type="button" class="btn" data-close>Cancelar</button><button type="button" class="btn" data-act="analisarLote">Analisar</button><button class="btn green" data-act="lancarLote" id="loteBtn">${rotuloLote()}</button></div></div>`);
+    <div class="sheet-foot lote-foot"><div id="loteResumo" class="note"></div><div class="btns" style="margin:0;justify-content:flex-end"><button type="button" class="btn" data-close>Cancelar</button><button type="button" class="btn" data-act="analisarLote">Analisar</button><button class="btn green" data-act="lancarLote" id="loteBtn">${rotuloLote()}</button></div></div>`, manter);
   resumoLote(); alvoLote();
 }
 function alvoLote(){
@@ -2083,7 +2089,11 @@ async function acao(a, el){
     case "abrirImport": folhaColar(); return;
     case "estado": { const [i, v] = arg.split(":"); const rows = memo.get("lote"); const r = rows[+i]; if (!r) return;
       if (v==="lancar"){ r._on = true; r.pago = false; } else if (v==="pago"){ r._on = true; r.pago = true; } else { r._on = false; r.pago = false; }
-      folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); return; }
+      const card = document.querySelector(`[data-lc="${i}"]`);
+      if (card){ const st = estadoLinha(r); card.classList.remove("lancar","pago","fora","existe"); card.classList.add(st);
+        card.querySelectorAll(".lc-seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.act.endsWith(":"+st))));
+        const c = card.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); }
+      const b = $("#loteBtn"); if (b) b.textContent = rotuloLote(); resumoLote(); alvoLote(); return; }
     case "loteAbrir": { const ed = document.querySelector(`[data-edit-lote="${arg}"]`); if (ed){ const abrir = ed.hidden; if (!abrir){ folhaLote(memo.get("lote"), memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); return; } ed.hidden = false; ed.querySelector("input")?.focus(); } return; }
     case "loteEhFatura": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r.tipo==="gasto") r.cartao = true; }); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), null, true); return; }
     case "lotePagasAuto": { const rows = memo.get("lote"); const alvo = memo.get("loteAlvoValor")||0; let soma = 0;
