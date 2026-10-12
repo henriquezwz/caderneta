@@ -1,4 +1,4 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2D5BFF"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Caderneta"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect x=%224%22 y=%226%22 width=%2220%22 height=%2220%22 rx=%225%22 fill=%22%232D5BFF%22/%3E%3Crect x=%2216%22 y=%226%22 width=%2212%22 height=%2220%22 rx=%225%22 fill=%22%23FF6A2B%22/%3E%3C/svg%3E"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Caderneta</title>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><meta name="theme-color" content="#2D5BFF"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Caderneta"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect x=%224%22 y=%226%22 width=%2220%22 height=%2220%22 rx=%225%22 fill=%22%232D5BFF%22/%3E%3Crect x=%2216%22 y=%226%22 width=%2212%22 height=%2220%22 rx=%225%22 fill=%22%23FF6A2B%22/%3E%3C/svg%3E"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Caderneta</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
@@ -479,6 +479,15 @@ main{max-width:1120px;margin:18px auto 0}
 .aj-box .inl{display:flex;gap:6px}.aj-box input{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font:600 16px var(--f-num,inherit);background:var(--surface);color:var(--ink)}
 .aj-box button{border:0;border-radius:10px;padding:0 14px;background:var(--blue);color:#fff;font-weight:700}.aj-box button.x{background:var(--line);color:var(--ink)}
 .ph-l b,.ph-v{white-space:nowrap}
+.ph-env{position:relative;display:inline-flex;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:4px 8px 7px;overflow:hidden}
+.ph-env i{position:absolute;left:0;bottom:0;height:3px;background:var(--cc)}.ph-env.over i{background:var(--danger)}.ph-env.over .ph-nm b{color:var(--danger)}
+.pl-env{background:none;border:0;padding:0;color:var(--blue);font:inherit;text-decoration:underline dotted;cursor:pointer}
+.novacat{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0;padding:8px;border:1.5px dashed var(--blue);border-radius:10px;background:var(--blue-soft)}
+.novacat input{flex:1 1 140px;min-width:0;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font:15px var(--f-ui);background:var(--surface);color:var(--ink)}
+.novacat select{padding:8px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.novacat button{border:0;border-radius:8px;padding:0 12px;font-weight:700;background:var(--blue);color:#fff;cursor:pointer}.novacat button.x{background:var(--line);color:var(--ink)}
+.conv-app{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:5px solid var(--tang);border-radius:14px;padding:12px 14px;box-shadow:0 12px 30px -12px rgba(20,27,52,.35);font-size:14px;max-width:520px;margin:0 auto}
+.conv-app span{flex:1 1 220px}.conv-app button{border:0;border-radius:10px;padding:9px 14px;font-weight:700;background:var(--tang);color:#fff;cursor:pointer}.conv-app button.x{background:none;color:var(--muted);padding:9px 6px}
 .ph-sec{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
 .ph-tit{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ph-tk{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--line);background:var(--surface);display:inline-grid;place-items:center;color:#fff;padding:0;cursor:pointer}.ph-tk.on,.ph-it.ok .ph-tk{background:var(--mint);border-color:var(--mint)}
@@ -1027,14 +1036,18 @@ function resumo(m){
   const itens = itensDoMes(m);
   const prevCat = {}; for (const f of itens) prevCat[f.cat] = (prevCat[f.cat]||0) + previsto(f, m);
   const orc = id => id==="dizimo" ? dz : Math.max(+catById(id)?.orc||0, prevCat[id]||0);
-  const fixosStatus = itens.map(f => { const l = L.find(d=>d.fixo===f.id); return {f, pago:!!l, lanc:l, prev: previsto(f, m)}; });
-  const fixosPend = sum(fixosStatus.filter(x=>!x.pago), x=>x.prev);
+  // itens "envelope" (Saídas, Gasolina, Dia a dia…): não se marcam como pagos; o que você gasta na categoria vai consumindo o previsto
+  const porCatLivre = {}; for (const g of gastos) if (!g.fixo){ const k = g.cat || "__sem"; porCatLivre[k] = (porCatLivre[k]||0) + g.valor; }
+  const fixosStatus = itens.map(f => { if (f.env){ const prev = previsto(f, m), gasto = r2(porCatLivre[f.cat]||0); return {f, env:true, gasto, pago:false, lanc:null, prev, resta: Math.max(0, prev - gasto)}; }
+    const l = L.find(d=>d.fixo===f.id); return {f, pago:!!l, lanc:l, prev: previsto(f, m)}; });
+  const fixosPend = sum(fixosStatus.filter(x=>!x.pago), x=>x.env ? x.resta : x.prev);
   let comprometido = 0;
   for (const c of S.cfg.cats) comprometido += Math.max(orc(c.id), porCat[c.id]||0);
   comprometido += (porCat.__sem||0);
   for (const k in porCat) if (k!=="__sem" && !catById(k)) comprometido += porCat[k];
   if (MF) comprometido += Math.max(CM.devido, CM.pagoMes);
-  const metaMensal = sum(S.cfg.metas||[], x=>+x.aporteMensal||0);
+  const gOv = S.cfg.planos?.[m]?.__guardar;
+  const metaMensal = gOv!=null ? +gOv||0 : sum(S.cfg.metas||[], x=>+x.aporteMensal||0);
   const aporteComp = Math.max(metaMensal, guardado);
   const sobraPrev = receitaPrev - comprometido - aporteComp + sum(L.filter(d=>d.tipo==="ajuste"), d=>+d.valor||0);
   // ajuste manual: diferença entre o que o app calcula e o que a pessoa diz ter de verdade
@@ -1052,7 +1065,7 @@ function resumo(m){
   const porDia = restantes>0 ? Math.max(0, caixaLivre)/restantes : 0;
   const decorrido = m===atual ? dia/dim : (m<atual ? 1 : 0);
   return {L, gastos, receitas, aportes, entrou, saiu, guardado, receitaPrev, porCat, orc, dz, fixosStatus, fixosPend,
-          comprometido, metaMensal, sobraPrev, livre, restantes, porDia, decorrido, caixaLivre, ajuste, guardarPend, dzPend, CM, cartPend, saiuCartao, contasPrev, cartPrev, planSobra};
+          comprometido, metaMensal, sobraPrev: MF ? planSobra : sobraPrev, livre, restantes, porDia, decorrido, caixaLivre, ajuste, guardarPend, dzPend, CM, cartPend, saiuCartao, contasPrev, cartPrev, planSobra};
 }
 
 function avisos(m, R){
@@ -1060,7 +1073,7 @@ function avisos(m, R){
   const atual = mesDe(hoje()); const dia = new Date().getDate();
   const revisar = R.L.filter(d=>d.revisar && d.tipo==="gasto");
   if (revisar.length) out.push({nivel:"warn", txt:`${revisar.length} ${revisar.length>1?"lançamentos":"lançamento"} sem categoria`, sub:"Um toque em cada e o app aprende para a próxima.", btn:"Revisar", act:"revisar"});
-  if (m===atual) for (const x of R.fixosStatus){ if (!x.pago && +x.f.dia && +x.f.dia < dia) out.push({nivel:"crit", txt:`${x.f.nome} venceu dia ${x.f.dia}`, sub:`${fm(x.f.valor)} ainda sem lançamento.`, btn:"Paguei", act:"pagarFixo:"+x.f.id}); }
+  if (m===atual) for (const x of R.fixosStatus){ if (!x.pago && !x.env && +x.f.dia && +x.f.dia < dia) out.push({nivel:"crit", txt:`${x.f.nome} venceu dia ${x.f.dia}`, sub:`${fm(x.f.valor)} ainda sem lançamento.`, btn:"Paguei", act:"pagarFixo:"+x.f.id}); }
   for (const c of S.cfg.cats){
     const o = R.orc(c.id), g = R.porCat[c.id]||0;
     if (o<=0 && g<=0) continue;
@@ -1096,7 +1109,7 @@ function avisos(m, R){
     }
   }
   if (m>=atual && R.receitaPrev<=0) out.push({nivel:"info", txt:"Cadastre seus salários", sub:"Com eles o app calcula a sobra do mês, o dízimo e quanto dá pra gastar por dia.", btn:"Cadastrar", act:"go:ajustes"});
-  else if (m>=atual && R.sobraPrev < 0) out.push({nivel:"crit", txt:`O mês fecha ${fm0(-R.sobraPrev)} no vermelho`, sub:"Somando o previsto de todas as categorias, contas fixas e a meta de guardar.", btn:"Orçamento", act:"go:ajustes"});
+  else if (m>=atual && R.sobraPrev < 0) out.push({nivel:"crit", txt:`O mês fecha ${fm0(-R.sobraPrev)} no vermelho`, sub: modoFatura() ? "Somando fatura, contas, orçamentos do dia a dia, planejados e o que vai guardar." : "Somando o previsto de todas as categorias, contas fixas e a meta de guardar.", btn: modoFatura() ? "Planejar" : "Orçamento", act: modoFatura() ? "planejar:"+m : "go:ajustes"});
   if (m<atual && R.L.length){
     const sobra = R.entrou - R.saiu - R.guardado;
     if (sobra>1 && (S.cfg.metas||[]).length) out.push({nivel:"good", txt:`${mesCurto(m)} fechou com ${fm0(sobra)} sobrando`, sub:`Mandar para ${S.cfg.metas[0].nome}?`, btn:"Guardar", act:"guardarSobra:"+r2(sobra)});
@@ -1165,7 +1178,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 17:15";
+const VERSAO = "12/10 17:40";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1311,11 +1324,11 @@ function viewMes(){
   if (vazio && S.travou) return `<div class="grid"><div class="panel empty"><b>Seus dados não chegaram.</b>O Firebase não respondeu.${ultimoErro?`<br><small>${esc(ultimoErro.slice(0,300))}</small>`:""}<div class="btns" style="justify-content:center"><button class="btn" data-act="sair">Sair e usar sem login</button><button class="btn" onclick="location.reload()">Recarregar</button></div><p class="note">versão ${VERSAO}</p></div></div>`;
   if (vazio) return `<div class="grid"><div class="panel empty"><b>Carregando sua caderneta…</b>${S.modo==="firebase" ? "Conectando ao seu Firebase. Se passar de alguns segundos, recarregue a página." : "Se demorar, abra este link no Claude conectado à sua conta."}</div></div>`;
   const cartPanel = painelCartao(m);
-  return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${fixPanel}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${alertas}${recPanel}${painelReceber()}${metas}</div></div>`;
+  return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${alertas}${recPanel}${painelReceber()}${metas}</div></div>`;
 }
 function blocoPlano(m, R){
   const MM = MES[+m.slice(5)-1], CM = R.CM, atual = mesDe(hoje());
-  const contas = R.fixosStatus.filter(x=>!x.f.soMes), plan = R.fixosStatus.filter(x=>x.f.soMes);
+  const contas = R.fixosStatus.filter(x=>!x.f.soMes && !x.env), plan = R.fixosStatus.filter(x=>x.f.soMes), envs = R.fixosStatus.filter(x=>x.env && !x.f.soMes);
   const linha = (nome, v, extra, cls="") => `<div class="ph-l ${cls}"><span>${nome}${extra?` <small>${extra}</small>`:""}</span><b class="num ${v<0?"neg":""}">${v<0?"−":""}${fm0(Math.abs(v))}</b></div>`;
   const chipItem = x => `<span class="ph-it ${x.pago?"ok":""}"><button class="ph-tk" data-act="${x.pago?"desfazer:"+x.lanc.id:"pagarFixo:"+x.f.id}" aria-label="${x.pago?"Desmarcar":"Marcar como pago"}">${x.pago?ck():""}</button>${memo.get("fx")===x.f.id ? `<span class="inl">${esc(x.f.nome)} <input id="fxVal" inputmode="decimal" value="${x.prev?BRL.format(x.prev):""}"><button data-act="confirmaFixo:${x.f.id}">OK</button></span>` : memo.get("fxPago")===x.f.id && x.pago ? `<span class="inl">${esc(x.f.nome)} <input id="fxPagoVal" inputmode="decimal" value="${BRL.format(x.lanc.valor)}"><button data-act="confirmaPago:${x.lanc.id}">OK</button></span>` : `<button class="ph-nm" data-act="${x.pago?"editarPago:"+x.f.id:"pagarComValor:"+x.f.id}">${esc(x.f.nome)} <b>${fm0(x.pago?x.lanc.valor:x.prev)}</b></button>`}${x.f.soMes&&!x.pago?`<button class="ph-x" data-act="planTirarRap:${x.f.id}" aria-label="Tirar">×</button>`:""}</span>`;
   const edCart = memo.get("fxCart")===m;
@@ -1323,7 +1336,14 @@ function blocoPlano(m, R){
       ${edCart ? `<span class="inl"><input id="cartVal" inputmode="decimal" value="${CM.devido?BRL.format(CM.devido):""}" placeholder="0,00"><button data-act="confirmaCartao:${m}">OK</button></span>` : `<button class="ph-v neg num" data-act="editarCartao:${m}" title="Toque para mudar">−${fm0(Math.max(CM.devido, CM.pagoMes))}</button>`}</div>
       ${!CM.devido && !CM.pagoMes && !CM.fi.itens.length ? `<small class="ph-dica">Toque no valor e digite quanto vem a fatura, ou mande a fatura para o app calcular.</small>` : ""}
       ${CM.adiantarTot ? `<div class="ph-l"><span class="ph-tit"><button class="ph-tk ${CM.adiantar<=0.5?"on":""}" data-act="${CM.adiantar<=0.5?"noop":"adiantarCartao:"+m}" aria-label="Já adiantei">${CM.adiantar<=0.5?ck():""}</button>Cartão deste mês para adiantar <small>${fm0(CM.adiantarTot)} em compras de ${MM}, já contadas nos gastos${CM.adiantadoMes?` · adiantado ${fm0(CM.adiantadoMes)}`:""} · não voltam na fatura de ${MES[+CM.prox.slice(5)-1]}</small></span><b class="num">${CM.adiantar>0.5?fm0(CM.adiantar):"ok"}</b></div>` : ""}</div>`;
-  const totContas = sum(contas, x=>x.pago ? x.lanc.valor : x.prev), totPlan = sum(plan, x=>x.pago ? x.lanc.valor : x.prev);
+  const totContas = sum(contas, x=>x.pago ? x.lanc.valor : x.prev), totPlan = sum(plan, x=>x.pago ? x.lanc.valor : x.prev), totEnv = sum(envs, x=>x.prev);
+  const envChip = x => { const ed = memo.get("fxPlan")===x.f.id; const pc = x.prev ? Math.min(100, x.gasto/x.prev*100) : (x.gasto?100:0);
+    return `<span class="ph-env ${x.gasto>x.prev+0.5?"over":""}" style="--cc:${corCat(x.f.cat)}">${ed ? `<span class="inl">${esc(x.f.nome)} <input id="planVal" inputmode="decimal" value="${x.prev?BRL.format(x.prev):""}"><button data-act="confirmaPlanVal:${x.f.id}">OK</button></span>`
+      : `<button class="ph-nm" data-act="planVal:${x.f.id}" title="Toque para mudar o previsto">${esc(x.f.nome)} <b>${fm0(x.gasto)}</b> de ${fm0(x.prev)}</button>`}<i style="width:${pc.toFixed(0)}%"></i></span>`; };
+  const mt = (S.cfg.metas||[])[0]; const edG = memo.get("fxGuardar")===m, novoG = memo.get("guardarAgora")===m;
+  const guardarSec = !mt ? "" : `<div class="ph-sec"><div class="ph-l"><span class="ph-tit"><button class="ph-tk ${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?"on":""}" data-act="${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?"noop":"guardarPlano:"+m}" aria-label="Guardar o previsto">${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?ck():""}</button>Guardar em ${esc(mt.nome)} <small>${R.guardado?`guardado ${fm0(R.guardado)} · `:""}saldo ${fm0(saldoMeta(mt))}</small></span>
+      ${edG ? `<span class="inl"><input id="guardVal" inputmode="decimal" value="${R.metaMensal?BRL.format(R.metaMensal):""}"><button data-act="confirmaGuardar:${m}">OK</button></span>` : `<button class="ph-v neg num" data-act="editarGuardar:${m}" title="Quanto quer guardar este mês">−${fm0(Math.max(R.metaMensal, R.guardado))}</button>`}</div>
+      ${novoG ? `<div class="ph-add"><input id="guardAgora" inputmode="decimal" placeholder="Quanto guardar agora?"><button data-act="confirmaGuardarAgora:${m}">OK</button></div>` : `<button class="aj-link" data-act="guardarAgora:${m}">+ guardar outro valor agora</button>`}</div>`;
   const gastosFora = r2(R.planSobra - R.caixaLivre);
   return `<div class="prevhero"><div class="ph-h"><b>Plano de ${MM}</b><button class="aj-link" data-act="planejar:${m}">editar contas</button></div>
     ${linha("Vai entrar", R.receitaPrev, R.receitaPrev>R.entrou?`recebido ${fm0(R.entrou)}`:"tudo recebido")}
@@ -1332,8 +1352,10 @@ function blocoPlano(m, R){
       ${contas.length?`<div class="ph-pend">${contas.sort((a,b)=>(a.pago-b.pago)||((+a.f.dia||99)-(+b.f.dia||99))).map(chipItem).join("")}</div>`:`<button class="aj-link" data-act="planejar:${m}">montar as contas do mês</button>`}</div>
     <div class="ph-sec">${linha("Planejados para "+MM, -totPlan, plan.length?"":"compras que você pretende fazer")}
       ${plan.length?`<div class="ph-pend">${plan.map(chipItem).join("")}</div>`:""}
+      ${R.fixosStatus.length===0 && Object.keys(S.hist).length ? `<button class="aj-link" data-act="baseAgora">Trazer os gastos fixos da minha planilha</button>` : ""}
       <form class="ph-add" id="planRap" data-mes="${m}"><input id="planRapIn" placeholder="tênis 300, presente 80…" autocomplete="off" enterkeyhint="done" aria-label="Planejar um gasto"><button aria-label="Adicionar">＋</button></form></div>
-    ${R.metaMensal ? linha("Guardar", -R.metaMensal, R.guardado?`guardado ${fm0(R.guardado)}`:"") : ""}
+    ${envs.length ? `<div class="ph-sec">${linha("Orçamentos do dia a dia", -totEnv, `gasto ${fm0(sum(envs,x=>x.gasto))}`)}<div class="ph-pend">${envs.map(envChip).join("")}</div></div>` : ""}
+    ${guardarSec}
     ${R.dz ? linha("Dízimo", -R.dz, "") : ""}
     ${R.ajuste ? linha("Ajuste manual", R.ajuste, "") : ""}
     ${linha("Sobra para o dia a dia", R.planSobra, "", "tot")}
@@ -1423,12 +1445,13 @@ function folhaPlanejar(m){
   const freq = {}; Object.keys(S.hist).sort().map(k=>S.hist[k]).forEach(h => (h.itens||[]).forEach(i => { const k = i[0].replace(/\s*\d+\/\d+\s*$/,"").trim(); if (!k || /poupan|total/i.test(k)) return; (freq[k] ||= {n:0, v:0}); freq[k].n++; freq[k].v = Math.max(i[2], i[3]) || freq[k].v; }));
   const jaTem = new Set(itens.map(f=>norm(f.nome)));
   const sugs = Object.entries(freq).filter(([k,v])=>v.n>=3 && v.v>0 && !jaTem.has(norm(k))).sort((a,b)=>b[1].n-a[1].n).slice(0,14);
-  const catOpt = `<option value="">Categoria automática</option>`+S.cfg.cats.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join("");
+  const catOpt = `<option value="">Categoria automática</option>`+S.cfg.cats.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join("")+`<option value="__nova">＋ Nova categoria…</option>`;
   abrirFolha(`<h3>Previsto de ${mesLongo(m)}</h3>
-    <p class="lead">Cada mês começa com o que você pagou no mês anterior. Ajuste o que mudou: vale para ${mesLongo(m)} e vira a base do mês seguinte.</p>
-    <div class="btns" style="margin:0 0 10px"><button type="button" class="btn" data-act="planCopiar">Usar os valores pagos em ${MES[+ant.slice(5)-1]}</button></div>
+    <p class="lead">Já vem com os fixos da sua planilha e os valores do mês passado. Mude só o que for diferente: vale para ${mesLongo(m)} e vira a base do mês seguinte.</p>
+    <div class="btns" style="margin:0 0 10px"><button type="button" class="btn" data-act="planCopiar">Copiar valores pagos em ${MES[+ant.slice(5)-1]}</button>${(S.cfg.fixos||[]).some(f=>f.soMes===ant)?`<button type="button" class="btn" data-act="planCopiarPlanejados">Copiar planejados de ${MES[+ant.slice(5)-1]}</button>`:""}${Object.keys(S.hist).length?`<button type="button" class="btn" data-act="baseAgora">Trazer fixos da planilha</button>`:""}</div>
+    <div class="ph-add" style="margin:0 0 12px"><input id="planRapSheet" placeholder="Planejar só este mês: tênis 300, presente 80" autocomplete="off"><button type="button" data-act="planRapSheet" aria-label="Adicionar">＋</button></div>
     <div class="plan-lista">${itens.map(f=>{ const pa = pagoEm(f, ant), ap = naPlanilha(f.nome, anoPassado) ?? pagoEm(f, anoPassado);
-      return `<div class="plan-row" style="--cc:${corCat(f.cat)}"><span class="dot"></span><div class="pl-nm">${esc(f.nome)}<small>${[esc(origemPrevisto(f,m)), pa!=null?`pago em ${MES[+ant.slice(5)-1]}: ${fm0(pa)}`:"", ap!=null?`${MES[+anoPassado.slice(5)-1]}/${anoPassado.slice(2,4)}: ${fm0(ap)}`:""].filter(Boolean).join(" · ")}</small></div>
+      return `<div class="plan-row" style="--cc:${corCat(f.cat)}"><span class="dot"></span><div class="pl-nm">${esc(f.nome)}<small>${[f.soMes?"só este mês":"", `<button type="button" class="pl-env" data-act="togEnv:${f.id}">${f.env?"orçamento (vai gastando)":"conta (marca paga)"}</button>`, esc(origemPrevisto(f,m)), pa!=null?`pago em ${MES[+ant.slice(5)-1]}: ${fm0(pa)}`:"", ap!=null?`${MES[+anoPassado.slice(5)-1]}/${anoPassado.slice(2,4)}: ${fm0(ap)}`:""].filter(Boolean).join(" · ")}</small></div>
         <input class="n" inputmode="decimal" data-plan="${f.id}" value="${previsto(f,m)?BRL.format(previsto(f,m)):""}" placeholder="0,00" aria-label="Previsto de ${esc(f.nome)}"><button type="button" class="x" data-act="planTirar:${f.id}" aria-label="Tirar deste mês">✕</button></div>`; }).join("") || `<p class="note">Nenhum item ainda. Use as sugestões abaixo ou adicione.</p>`}</div>
     <div class="prev-sum" style="margin-top:8px"><div>Total previsto <b id="planTot">${fm(sum(itens,f=>previsto(f,m)))}</b></div></div>
     ${sugs.length?`<div class="an-sec"><h4>Da sua planilha antiga (toque para adicionar)</h4><div class="sugs">${sugs.map(([k,v])=>`<button type="button" class="chip" data-act="planAdd:${esc(k.replace(/\|/g," "))}|${v.v}|${categorizar(k)||""}">＋ ${esc(k)} · ${fm0(v.v)}</button>`).join("")}</div></div>`:""}
@@ -1646,6 +1669,8 @@ function viewAjustes(){
         : `<p class="note">No celular, o login com Google pode falhar. Crie uma senha para esta mesma conta e entre com e-mail no celular, com os mesmos dados.</p>
         <div class="inl" style="margin-top:8px;flex-wrap:wrap"><input id="novaSenha" type="password" autocomplete="new-password" placeholder="Nova senha (mín. 6)" style="width:200px;font-family:var(--f-ui)"><button data-act="criarSenha">Criar senha</button></div>`}
       </section>`; })() : ""}
+    ${S.modo==="firebase" || /github\.io$/.test(location.hostname) ? `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--tang)">App no celular</h2></div>
+      ${ehApp() ? `<p class="note">Você já está usando a Caderneta instalada como app.</p>` : `<p class="note">Instale para abrir a Caderneta direto da tela inicial, em tela cheia, como um aplicativo.</p><div class="btns"><button class="btn green" data-act="instalarApp">Instalar na tela inicial</button></div>`}</section>` : ""}
     <section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">Cartão de crédito</h2></div>
       <div class="form-rows">
         <div class="frow" style="grid-template-columns:1fr 130px"><span>Nome</span><input data-cfg="cartao.nome" value="${esc(C.cartao?.nome||"Cartão")}"></div>
@@ -1689,7 +1714,7 @@ function folhaEditar(id){
       <label>Valor${d.divide?" total":""}<input name="valor" inputmode="decimal" value="${BRL.format(totalDe(d))}"></label>
       <label>Data<input name="data" type="date" value="${d.data}"></label>
       <label>Tipo<select name="tipo">${[["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["resgate","Resgatei"],["pagfatura","Pagamento de fatura"]].map(([v,n])=>`<option value="${v}" ${d.tipo===v?"selected":""}>${n}</option>`).join("")}</select></label>
-      <label>Categoria<select name="cat"><option value="">Sem categoria</option>${S.cfg.cats.map(c=>`<option value="${c.id}" ${d.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select></label>
+      <label>Categoria<select name="cat"><option value="">Sem categoria</option>${S.cfg.cats.map(c=>`<option value="${c.id}" ${d.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}<option value="__nova">＋ Nova categoria…</option></select></label>
       ${metasOpts?`<label class="full">Meta (se for guardado)<select name="meta">${metasOpts}</select></label>`:""}
       <label><span><input type="checkbox" name="cartao" ${d.cartao?"checked":""}> No cartão de crédito</span></label>
       <label>Fatura que vence em<select name="fatura">${[-2,-1,0,1,2,3].map(k=>addMes(mesDe(d.data),k)).map(m=>`<option value="${m}" ${(d.fatura||faturaDe(d.data))===m?"selected":""}>${mesLongo(m)}</option>`).join("")}</select></label>
@@ -1783,7 +1808,7 @@ function folhaLote(rows, titulo, nota, venc, manter){
     if (!manter){ memo.delete("sugPago"); sugerirPagos(rows, 0); }
   }
   memo.set("lote", rows); memo.set("loteVenc", venc||null); memo.set("loteTitulo", titulo); memo.set("loteNota", nota||null);
-  const catOpt = v => `<option value="">Sem categoria</option>`+S.cfg.cats.map(c=>`<option value="${c.id}" ${v===c.id?"selected":""}>${esc(c.nome)}</option>`).join("");
+  const catOpt = v => `<option value="">Sem categoria</option>`+S.cfg.cats.map(c=>`<option value="${c.id}" ${v===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")+`<option value="__nova">＋ Nova categoria…</option>`;
   const opcoesVenc = [-2,-1,0,1,2,3].map(k=>addMes(mesDe(hoje()),k));
   const tipos = [["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["resgate","Resgatei"],["pagfatura","Pagou fatura"],["interno","Ignorar"]];
   const nDup = rows.filter(r=>r._dupId).length;
@@ -2156,7 +2181,7 @@ function atualizarPreview(){
   $("#goBtn").disabled = !p && !S.ai;
   if (!p){ pv.innerHTML = `<span class="pill o">Faltou o valor</span><span class="hint">Ex.: “mercado 230”.</span>${iaBtn}`; return; }
   const tipoL = {gasto:["Gasto",""],receita:["Receita","g"],aporte:["Guardar","y"],resgate:["Resgate","y"],pagfatura:["Pagou a fatura","y"]}[p.tipo];
-  const catSel = p.tipo==="gasto" ? `<span class="pill ${p.cat?"":"o"}"><span class="dot" style="--cc:${corCat(p.cat)}"></span><select id="pvCat" aria-label="Categoria">${p.cat?"":`<option value="">Sem categoria</option>`}${S.cfg.cats.map(c=>`<option value="${c.id}" ${p.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select></span>` : "";
+  const catSel = p.tipo==="gasto" ? `<span class="pill ${p.cat?"":"o"}"><span class="dot" style="--cc:${corCat(p.cat)}"></span><select id="pvCat" aria-label="Categoria">${p.cat?"":`<option value="">Sem categoria</option>`}${S.cfg.cats.map(c=>`<option value="${c.id}" ${p.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}<option value="__nova">＋ Nova categoria…</option></select></span>` : "";
   const metaSel = (p.tipo==="aporte"||p.tipo==="resgate") && (S.cfg.metas||[]).length ? `<span class="pill y"><select id="pvMeta" aria-label="Meta">${S.cfg.metas.map(m=>`<option value="${m.id}" ${p.meta===m.id?"selected":""}>${esc(m.nome)}</option>`).join("")}</select></span>` : "";
   const d = p.data===hoje() ? "hoje" : p.data.slice(8)+"/"+p.data.slice(5,7);
   const ligado = p.tipo==="gasto" && (p.parcelas||1)===1 && !p.cartao ? acharItemPrevisto(p.desc, p.data.slice(0,7)) : null;
@@ -2213,6 +2238,27 @@ async function acao(a, el){
       if (!(v>0)) return; const id = uid(); const venc = cmd==="jaAdiantei" ? arg : CM.prox;
       await gravarLanc(id, {tipo:"pagfatura", valor:v, desc:"Adiantamento da fatura", fatura:venc, cat:null, data:hoje(), origem:"adiantamento", criado:Date.now()});
       toast(`Adiantado ${fm(v)} da fatura de ${MES[+venc.slice(5)-1]}`, async()=>{ await apagarLanc(id); toast("Desfeito"); }); return; }
+    case "instalarApp": { $("#convApp")?.remove(); if (pedidoInstalar){ pedidoInstalar.prompt(); const r = await pedidoInstalar.userChoice.catch(()=>({})); lsSet("caderneta-instalar", r.outcome==="accepted" ? "feito" : "nao"); pedidoInstalar = null; }
+      else toast(/iphone|ipad/i.test(navigator.userAgent) ? "No Safari: toque em Compartilhar e depois em “Adicionar à Tela de Início”." : "No Chrome: toque no menu ⋮ e depois em “Instalar app” ou “Adicionar à tela inicial”.", null, 8000); render(); return; }
+    case "naoInstalar": $("#convApp")?.remove(); lsSet("caderneta-instalar","nao"); toast("Combinado, não pergunto mais. Se mudar de ideia, está em Ajustes."); return;
+    case "planVal": memo.set("fxPlan", arg); render(); setTimeout(()=>{ const i=$("#planVal"); i?.focus(); i?.select(); },0); return;
+    case "confirmaPlanVal": { const v = parseValor($("#planVal")?.value||""); memo.delete("fxPlan"); ((S.cfg.planos ||= {})[m] ||= {})[arg] = v>0 ? v : 0; salvarCfg(true); render(); return; }
+    case "editarGuardar": memo.set("fxGuardar", arg); render(); setTimeout(()=>{ const i=$("#guardVal"); i?.focus(); i?.select(); },0); return;
+    case "confirmaGuardar": { const txt = ($("#guardVal")?.value||"").trim(); memo.delete("fxGuardar"); ((S.cfg.planos ||= {})[arg] ||= {}); if (!txt) delete S.cfg.planos[arg].__guardar; else S.cfg.planos[arg].__guardar = parseValor(txt)||0; salvarCfg(true); render(); return; }
+    case "guardarPlano": { const mt = S.cfg.metas[0]; if (!mt) return; const r = resumo(arg); const v = r2(r.metaMensal - r.guardado);
+      if (!(v>0)){ memo.set("fxGuardar", arg); render(); setTimeout(()=>$("#guardVal")?.focus(),0); toast("Quanto quer guardar este mês?"); return; }
+      const ids = await lancarParsed({tipo:"aporte", valor:v, desc:mt.nome, meta:mt.id, data: arg===mesDe(hoje()) ? hoje() : dataNoMes(arg, 10), origem:"checklist"});
+      toast(`${fm(v)} guardados em ${mt.nome}. Saiu do saldo do mês.`, async()=>{ for (const id of ids) await apagarLanc(id); toast("Desfeito"); }); return; }
+    case "guardarAgora": memo.set("guardarAgora", arg); render(); setTimeout(()=>$("#guardAgora")?.focus(),0); return;
+    case "confirmaGuardarAgora": { const mt = S.cfg.metas[0]; const v = parseValor($("#guardAgora")?.value||""); memo.delete("guardarAgora"); if (!mt || !(v>0)){ render(); return; }
+      const ids = await lancarParsed({tipo:"aporte", valor:v, desc:mt.nome, meta:mt.id, data: arg===mesDe(hoje()) ? hoje() : dataNoMes(arg, 10), origem:"checklist"});
+      toast(`${fm(v)} guardados em ${mt.nome}`, async()=>{ for (const id of ids) await apagarLanc(id); toast("Desfeito"); }); return; }
+    case "baseAgora": { S.cfg.baseV2 = false; S.baseTentada = false; await tentarBase(true); render(); return; }
+    case "planCopiarPlanejados": { const mm = memo.get("planMes"), ant = addMes(mm,-1); const ja = new Set(itensDoMes(mm).map(f=>norm(f.nome))); let n = 0;
+      for (const f of (S.cfg.fixos||[]).filter(f=>f.soMes===ant)){ if (ja.has(norm(f.nome))) continue; const id = "f"+uid(); const v = previsto(f, ant); S.cfg.fixos.push(Object.assign({}, f, {id, soMes:mm, valor:v})); ((S.cfg.planos ||= {})[mm] ||= {})[id] = v; n++; }
+      salvarCfg(true); folhaPlanejar(mm); toast(n ? `Copiei ${n} ${n>1?"planejados":"planejado"} de ${MES[+ant.slice(5)-1]}.` : "Nada novo para copiar."); return; }
+    case "planRapSheet": { planejarRapido($("#planRapSheet")?.value, memo.get("planMes")); folhaPlanejar(memo.get("planMes")); return; }
+    case "togEnv": { const f = S.cfg.fixos.find(x=>x.id===arg); if (!f) return; f.env = !f.env; salvarCfg(true); folhaPlanejar(memo.get("planMes")); return; }
     case "planTirarRap": { S.cfg.fixos = S.cfg.fixos.filter(x=>x.id!==arg); salvarCfg(true); render(); return; }
     case "abrirAjuste": memo.set("ajSaldo", arg); render(); setTimeout(()=>$("#ajVal")?.focus(), 30); return;
     case "cancelaAjuste": memo.delete("ajSaldo"); render(); return;
@@ -2259,7 +2305,7 @@ async function acao(a, el){
       salvarCfg(true); folhaPlanejar(mm); return; }
     case "confirmaFixo": { const f = S.cfg.fixos.find(x=>x.id===arg); const v = parseValor($("#fxVal")?.value||""); memo.delete("fx");
       if (!(v>0)){ render(); return; } await pagarFixo(f, v, m); toast(`${f.nome}: ${fm(v)} pago`); return; }
-    case "pagarTodos": { let n=0; for (const x of R().fixosStatus) if (!x.pago && x.prev>0){ await pagarFixo(x.f, x.prev, m); n++; } toast(`${n} itens marcados`); return; }
+    case "pagarTodos": { let n=0; for (const x of R().fixosStatus) if (!x.pago && !x.env && x.prev>0){ await pagarFixo(x.f, x.prev, m); n++; } toast(`${n} itens marcados`); return; }
     case "dizimo": { const r = R(); const v = r2(r.dz - (r.porCat.dizimo||0)); if (!(v>0)){ toast("Lance as receitas primeiro"); return; }
       await lancarParsed({tipo:"gasto", valor:v, desc:"Dízimo", cat:"dizimo", data:m===mesDe(hoje())?hoje():dataNoMes(m,28), origem:"checklist"}, {id:`dz-${m}-${Math.round(r.receitaPrev)}`}); toast(`Dízimo de ${fm(v)} lançado`); return; }
     case "virarFixa": { const d = S.lanc.get(arg); if (!d) return; S.cfg.fixos.push({id:"f"+uid(), nome:d.desc, valor:d.valor, dia:+d.data.slice(8), cat:d.cat||"outros", varia:false});
@@ -2496,6 +2542,37 @@ Responda em português do Brasil, direto, com números exatos da fatura, em até
   }
 });
 document.addEventListener("keydown", e=>{ if (e.key==="Escape") fecharFolha(); });
+/* instalar como app (Android/Chromebook: botão; iPhone: instrução). Convite aparece uma vez só. */
+let pedidoInstalar = null;
+const ehApp = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const lsGet = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } }, lsSet = (k,v) => { try{ localStorage.setItem(k,v); }catch(e){} };
+if ("serviceWorker" in navigator && /github\.io$/.test(location.hostname)) navigator.serviceWorker.register("sw.js").catch(()=>{});
+addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); pedidoInstalar = e;
+  if (!lsGet("caderneta-instalar") && !ehApp() && !S.visitante) setTimeout(()=>{ if (!pedidoInstalar || $("#convApp")) return;
+    const d = document.createElement("div"); d.id = "convApp"; d.className = "conv-app";
+    d.innerHTML = `<span><b>Quer a Caderneta como app?</b> Abre direto da tela inicial, sem navegador.</span><button type="button" data-act="instalarApp">Instalar</button><button type="button" class="x" data-act="naoInstalar" aria-label="Agora não">Agora não</button>`;
+    document.body.appendChild(d); }, 4000); });
+addEventListener("appinstalled", ()=>{ lsSet("caderneta-instalar","feito"); $("#convApp")?.remove(); pedidoInstalar = null; toast("Pronto: a Caderneta está na sua tela inicial."); });
+/* nova categoria direto do seletor */
+document.addEventListener("focusin", e=>{ const t = e.target; if (t.tagName==="SELECT" && t.querySelector('option[value="__nova"]')) t.dataset.prev = t.value; }, true);
+document.addEventListener("change", e=>{ const t = e.target; if (t.tagName!=="SELECT" || t.value!=="__nova") return;
+  e.stopImmediatePropagation(); t.value = t.dataset.prev || ""; novaCategoriaInline(t); }, true);
+function novaCategoriaInline(sel){
+  document.querySelectorAll(".novacat").forEach(x=>x.remove());
+  const box = document.createElement("div"); box.className = "novacat";
+  box.innerHTML = `<input placeholder="Nome da categoria" maxlength="30" autocomplete="off"><select aria-label="Tipo"><option value="estilo">Estilo de vida</option><option value="essencial">Essencial</option><option value="assin">Assinatura</option><option value="outros">Outros</option></select><button type="button" class="ok">Criar</button><button type="button" class="x" aria-label="Cancelar">×</button>`;
+  const ancora = sel.closest("label, .pill") || sel; ancora.insertAdjacentElement("afterend", box);
+  const inp = box.querySelector("input"); inp.focus();
+  const criar = () => { const nome = inp.value.trim(); if (!nome){ inp.focus(); return; }
+    let ex = S.cfg.cats.find(c=>norm(c.nome)===norm(nome)); let id = ex?.id;
+    if (!ex){ const base = norm(nome).replace(/[^a-z0-9]+/g,"").slice(0,16) || "cat"; id = base; let i = 2; while (catById(id) || id==="__nova") id = base+(i++);
+      S.cfg.cats.push({id, nome: nome.charAt(0).toUpperCase()+nome.slice(1), grupo: box.querySelector("select").value, orc:0}); salvarCfg(true); }
+    document.querySelectorAll('select option[value="__nova"]').forEach(o=>{ const s2 = o.parentElement; if (!s2.querySelector(`option[value="${id}"]`)){ const op = document.createElement("option"); op.value = id; op.textContent = catById(id).nome; s2.insertBefore(op, o); } });
+    box.remove(); sel.value = id; sel.dataset.prev = id; sel.dispatchEvent(new Event("input",{bubbles:true})); sel.dispatchEvent(new Event("change",{bubbles:true}));
+    toast(ex ? `Usei a categoria ${ex.nome}` : `Categoria “${catById(id).nome}” criada`); };
+  box.querySelector(".ok").onclick = criar; box.querySelector(".x").onclick = () => box.remove();
+  inp.addEventListener("keydown", e=>{ if (e.key==="Enter"){ e.preventDefault(); criar(); } });
+}
 document.addEventListener("toggle", e=>{ const d = e.target; if (d?.classList?.contains("fatgrp")){ (S.ext.abertas ||= {})[d.dataset.venc] = d.open; } }, true);
 window.addEventListener("scroll", ()=>$("#top").classList.toggle("scrolled", window.scrollY>4), {passive:true});
 
@@ -2634,18 +2711,33 @@ function baseDoHistorico(){
   const med = a => { const b = a.slice().sort((x,y)=>x-y); return b.length ? b[Math.floor((b.length-1)/2)] : 0; };
   return Object.values(st).filter(x => x.meses.length >= 8 && x.rec.length >= 3).map(x => ({nome:x.nome, valor: Math.round(x.rec[x.rec.length-1] || med(x.rec)), cat: categorizar(x.nome) || "outros"}));
 }
-async function tentarBase(){
-  if (S.visitante || S.baseTentada || !S.gotCfg || S.cfg.baseV1 || !Object.keys(S.hist).length) return;
+const ENV_RE = /^(saidas?|outros|dia a dia|compras|gasolina|combustivel|mercado|ifood|delivery|lazer|feira)\b/;
+async function tentarBase(forcar){
+  if (S.visitante || (!forcar && S.baseTentada) || !S.gotCfg || (!forcar && S.cfg.baseV2) || !Object.keys(S.hist).length) return;
   S.baseTentada = true;
-  const base = baseDoHistorico(); if (!base.length) return;
+  // gastos que se repetem na planilha (6 dos últimos 12 meses), com o último valor
+  const meses = Object.keys(S.hist).sort().slice(-12); if (meses.length < 4) return;
+  const limpa = n => String(n).replace(/\s*\d+\/\d+\s*$/,"").replace(/\s*pt\s*\d+$/i,"").replace(/\s+/g," ").trim();
+  const st = {};
+  for (const mm of meses){ const vistos = new Set();
+    for (const it of (S.hist[mm].itens||[])){ const bruto = String(it[0]||""); const nome = limpa(bruto); const k = norm(nome); const v = (+it[2]>0 ? +it[2] : +it[3]) || 0;
+      if (!k || v<=0 || vistos.has(k) || /dizimo|total|investiment/.test(k)) continue; vistos.add(k);
+      (st[k] ||= {nome, bruto, n:0, ult:0}); st[k].n++; st[k].ult = v; } }
+  const min = Math.min(6, Math.ceil(meses.length/2));
   const chave = n => norm(n).replace(/[^a-z]/g,"");
-  const existentes = (S.cfg.fixos||[]).map(f=>chave(f.nome));
-  let n = 0;
-  for (const b of base){ const k = chave(b.nome); if (existentes.some(e => e.startsWith(k) || k.startsWith(e) || (k.length>4 && e.includes(k.slice(0,5))))) continue;
-    (S.cfg.fixos ||= []).push({id:"f"+uid(), nome:b.nome, valor:b.valor, dia:0, cat:b.cat, varia:true, daPlanilha:true}); n++; }
-  S.cfg.baseV1 = true; if (S.cfg.dizimo) S.cfg.dizimo.ativo = false;
+  const existentes = (S.cfg.fixos||[]).filter(f=>!f.soMes).map(f=>chave(f.nome));
+  let n = 0, poup = 0;
+  for (const x of Object.values(st).filter(x=>x.n >= min)){
+    const k = chave(x.nome);
+    if (/poupan/.test(norm(x.nome))){ poup = x.ult; continue; }
+    if (existentes.some(e => e===k || e.startsWith(k) || k.startsWith(e))) continue;
+    const env = ENV_RE.test(norm(x.nome));
+    (S.cfg.fixos ||= []).push({id:"f"+uid(), nome:x.nome, valor:Math.round(x.ult), dia:0, cat: categorizar(x.bruto) || categorizar(x.nome) || "outros", varia:true, daPlanilha:true, ...(env?{env:true}:{})}); n++; existentes.push(k); }
+  for (const f of S.cfg.fixos||[]) if (!f.soMes && f.env===undefined && ENV_RE.test(norm(f.nome))) f.env = true;
+  const mt = (S.cfg.metas||[])[0]; if (mt && poup && !(+mt.aporteMensal)) mt.aporteMensal = Math.round(poup);
+  S.cfg.baseV1 = true; S.cfg.baseV2 = true; if (S.cfg.dizimo) S.cfg.dizimo.ativo = false;
   salvarCfg(true);
-  if (n) toast(`Montei o previsto com ${n} gastos que se repetem na sua planilha. Ajuste em “Planejar”.`, null, 8000);
+  if (n || forcar) toast(n ? `Trouxe ${n} gastos fixos da sua planilha para o plano${poup?` e ${fm0(poup)} por mês para guardar`:""}. Ajuste o que mudou.` : "Os fixos da planilha já estavam no plano.", null, 8000);
 }
 function conectar(db, base){
   desligar.forEach(f => { try{ f(); }catch(e){} }); desligar = [];
