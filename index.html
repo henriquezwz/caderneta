@@ -1076,7 +1076,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 16:45";
+const VERSAO = "12/10 17:00";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -2344,9 +2344,35 @@ function adaptadorFirestore(fs, fdb){
   });
   return {doc: docRef};
 }
+/* monta os gastos base a partir do histórico importado (uma vez por conta) */
+function baseDoHistorico(){
+  const meses = Object.keys(S.hist).sort().slice(-18); if (meses.length < 6) return [];
+  const ult6 = new Set(meses.slice(-6));
+  const limpa = n => String(n).replace(/\s*\d+\/\d+\s*$/,"").replace(/\s+/g," ").trim();
+  const st = {};
+  for (const m of meses){ const vistos = new Set();
+    for (const it of (S.hist[m].itens||[])){ const nome = limpa(it[0]); const k = norm(nome); const v = (+it[2]>0 ? +it[2] : +it[3]) || 0;
+      if (!k || v<=0 || vistos.has(k) || /poupan|dizimo|total|investiment/.test(k)) continue; vistos.add(k);
+      (st[k] ||= {nome, meses:[], vals:[], rec:[]}); st[k].meses.push(m); st[k].vals.push(v); if (ult6.has(m)) st[k].rec.push(v); } }
+  const med = a => { const b = a.slice().sort((x,y)=>x-y); return b.length ? b[Math.floor((b.length-1)/2)] : 0; };
+  return Object.values(st).filter(x => x.meses.length >= 8 && x.rec.length >= 3).map(x => ({nome:x.nome, valor: Math.round(x.rec[x.rec.length-1] || med(x.rec)), cat: categorizar(x.nome) || "outros"}));
+}
+async function tentarBase(){
+  if (S.visitante || S.baseTentada || !S.gotCfg || !S.cfgExists || S.cfg.baseV1 || !Object.keys(S.hist).length) return;
+  S.baseTentada = true;
+  const base = baseDoHistorico(); if (!base.length) return;
+  const chave = n => norm(n).replace(/[^a-z]/g,"");
+  const existentes = (S.cfg.fixos||[]).map(f=>chave(f.nome));
+  let n = 0;
+  for (const b of base){ const k = chave(b.nome); if (existentes.some(e => e.startsWith(k) || k.startsWith(e) || (k.length>4 && e.includes(k.slice(0,5))))) continue;
+    (S.cfg.fixos ||= []).push({id:"f"+uid(), nome:b.nome, valor:b.valor, dia:0, cat:b.cat, varia:true, daPlanilha:true}); n++; }
+  S.cfg.baseV1 = true; if (S.cfg.dizimo) S.cfg.dizimo.ativo = false;
+  salvarCfg(true);
+  if (n) toast(`Montei o previsto com ${n} gastos que se repetem na sua planilha. Ajuste em “Planejar”.`, null, 8000);
+}
 function conectar(db, base){
   desligar.forEach(f => { try{ f(); }catch(e){} }); desligar = [];
-  S.lanc = new Map(); S.hist = {}; S.cfg = clone(CFG_PADRAO); S.gotLanc = false; S.gotCfg = false; S.lancServidor = false; S.autoDone = false;
+  S.lanc = new Map(); S.hist = {}; S.cfg = clone(CFG_PADRAO); S.baseTentada = false; S.cfgExists = false; S.gotLanc = false; S.gotCfg = false; S.lancServidor = false; S.autoDone = false;
   S.db = db; S.online = true; if (!S.visitante) $("#banner").innerHTML = "";
   cfgRef = db.doc(base);
   lancCol = cfgRef.collection("lanc");
@@ -2354,14 +2380,14 @@ function conectar(db, base){
   desligar.push(cfgRef.onSnapshot(snap=>{
     S.gotCfg = true;
     if (snap.exists){ if (!cfgWriting && !cfgDirty){ S.cfg = Object.assign(clone(CFG_PADRAO), clone(snap.data())); S.cfg.regras ||= {}; S.cfg.pulados ||= {}; } S.cfgExists = true; }
-    render(); if (S.lancServidor && !snap.metadata.fromCache) autoFixos();
+    render(); tentarBase(); if (S.lancServidor && !snap.metadata.fromCache) autoFixos();
   }, ()=>{ S.gotLanc = true; render(); banner(S.modo==="firebase" ? "O Firebase recusou o acesso aos dados. Confira as regras do Firestore (coleção caderneta)." : "Não consegui ler seus dados. Recarregue a página."); }));
   desligar.push(lancCol.onSnapshot(snap=>{
     S.lanc = new Map(snap.docs.map(d=>[d.id, d.data()]));
     S.gotLanc = true; S.lancServidor = S.lancServidor || !snap.metadata.fromCache;
     render(); if (S.gotCfg && S.lancServidor) autoFixos();
   }, e=>{ S.gotLanc = true; render(); banner(S.modo==="firebase" ? "O Firebase recusou o acesso aos dados. Confira as regras do Firestore (coleção caderneta)." : "A sincronização caiu. Recarregue a página."); }));
-  desligar.push(histCol.onSnapshot(snap=>{ const h = {}; for (const d of snap.docs) h[d.id] = d.data(); S.hist = h; render(); }, ()=>{}));
+  desligar.push(histCol.onSnapshot(snap=>{ const h = {}; for (const d of snap.docs) h[d.id] = d.data(); S.hist = h; render(); tentarBase(); }, ()=>{}));
 }
 async function importarBackup(txt){
   let b; try{ b = JSON.parse(txt); }catch(e){ toast("Esse arquivo não é um backup da Caderneta."); return; }
@@ -2372,7 +2398,7 @@ async function importarBackup(txt){
     S.cfg = Object.assign(clone(CFG_PADRAO), b.cfg); await cfgRef.set(clone(S.cfg));
     const L = Object.entries(b.lancamentos||{}); for (const [id,d] of L) await lancCol.doc(id).set(d);
     const H = Object.entries(b.historico||{}); for (const [id,d] of H) await histCol.doc(id).set(d);
-    toast(`Backup importado: ${L.length} lançamentos e ${H.length} meses de histórico`);
+    toast(`Backup importado: ${L.length} lançamentos e ${H.length} meses de histórico`); S.baseTentada = false; setTimeout(tentarBase, 1500);
   }catch(e){ toast("A importação parou no meio. Tente de novo."); }
 }
 function banner(t){ $("#banner").innerHTML = `<div class="banner">${esc(t)}</div>`; }
