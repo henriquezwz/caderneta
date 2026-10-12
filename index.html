@@ -1602,7 +1602,7 @@ async function acao(a, el){
     case "togComp": { const c = catById(arg); if (!c) return; c.comp = contaNaCompra(arg) ? "fatura" : "compra"; salvarCfg(true);
       for (const [id,d] of S.lanc) if (d.cartao && d.cat===arg){ const nm = mesEfetivo(d); if (nm!==d.mes) gravarLanc(id, d); } return; }
     case "importBackup": { const inp = document.createElement("input"); inp.type="file"; inp.accept=".json,application/json"; inp.onchange = async ()=>{ const f = inp.files[0]; if (f) importarBackup(await f.text()); }; inp.click(); return; }
-    case "sair": await FB.authM.signOut(FB.auth); location.reload(); return;
+    case "sair": try{ await FB.authM.signOut(FB.auth); }catch(e){} location.reload(); return;
     case "escolherCsv": $("#fileIn").click(); return;
     case "colarLer": { const t = $("#pasteIn").value; if (!t.trim()) return; const csv = importarCSV(t);
       if (csv && csv.length){ folhaLote(csv, `${csv.length} lançamentos do extrato`); return; }
@@ -1724,7 +1724,7 @@ async function iniciarFirebase(){
     const base = `https://www.gstatic.com/firebasejs/${FB_V}/`;
     const [appM, authM, fsM] = await Promise.all([import(base+"firebase-app.js"), import(base+"firebase-auth.js"), import(base+"firebase-firestore.js")]);
     const app = appM.initializeApp(FB_CFG, "caderneta");
-    let fdb; try{ fdb = fsM.initializeFirestore(app, {localCache: fsM.persistentLocalCache({tabManager: fsM.persistentMultipleTabManager()})}); }catch(e){ fdb = fsM.getFirestore(app); }
+    const fdb = fsM.getFirestore(app);
     const auth = authM.getAuth(app);
     FB = {authM, auth, fsM, fdb, app};
     authM.onAuthStateChanged(auth, u=>{
@@ -1735,8 +1735,26 @@ async function iniciarFirebase(){
       $("#banner").innerHTML = "";
       S.ai = iaGemini(); atualizarPreview();
       conectar(adaptadorFirestore(fsM, fdb), `caderneta/${u.uid}`);
+      diagnosticarFirebase(fsM, fdb, `caderneta/${u.uid}`);
     });
   }catch(e){ S.online = false; banner("Não consegui conectar ao Firebase. Confira a internet e recarregue."); render(); }
+}
+function diagnosticarFirebase(fs, fdb, base){
+  const dica = {
+    "permission-denied": "O Firebase recusou o acesso. As regras do Firestore precisam liberar a coleção caderneta para o usuário logado.",
+    "not-found": "O banco Firestore não existe nesse projeto. Crie em Build → Firestore Database → Criar banco de dados.",
+    "failed-precondition": "O banco Firestore não foi criado ou está no modo errado. Crie em Build → Firestore Database (modo nativo).",
+    "unavailable": "Não consegui falar com o Firestore. Confira a internet. Se persistir, confira se o banco Firestore foi criado no projeto.",
+    "unauthenticated": "O login expirou. Saia e entre de novo com o Google.",
+    "timeout": "O Firestore não respondeu em 10 segundos. Provavelmente o banco não foi criado no projeto (Build → Firestore Database)."
+  };
+  const t = setTimeout(() => falha("timeout"), 10000);
+  function falha(code, msg){
+    clearTimeout(t);
+    if (S.uidFb && !S.visitante){ S.gotLanc = true; S.gotCfg = true; render();
+      $("#banner").innerHTML = `<div class="banner visit" style="background:var(--danger-soft)"><span><b>Seus dados não carregaram.</b> ${esc(dica[code] || ("Erro do Firebase: " + (code||"") + " " + (msg||"")))}<br><small>Código: ${esc(code||"?")}</small></span><button class="btn" data-act="sair">Sair e usar sem login</button></div>`; }
+  }
+  fs.getDocFromServer(fs.doc(fdb, base)).then(() => { clearTimeout(t); }).catch(e => falha(e?.code || "erro", e?.message));
 }
 function bannerVisitante(){
   $("#banner").innerHTML = `<div class="banner visit"><span><b>Modo visitante.</b> Pode usar à vontade: as categorias são de exemplo e o que você lançar fica só neste navegador. Entre com Google para guardar na nuvem e usar em qualquer aparelho.</span><button class="btn green" data-act="login">Entrar com Google</button></div>`;
