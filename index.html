@@ -474,6 +474,19 @@ main{max-width:1120px;margin:18px auto 0}
 .fb-cot .pill{background:var(--surface)}
 .sugbox{display:grid;gap:3px;background:var(--surface);border-radius:10px;padding:9px 11px;border:1.5px solid color-mix(in srgb,var(--violet) 40%,var(--line))}
 .sugbox span{color:var(--muted);font-size:13px}
+.aj-link{background:none;border:0;padding:4px 0;margin:2px 0 0;color:var(--blue);font:600 13px/1.3 var(--f-ui);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.aj-box{margin:6px 0 4px;display:grid;gap:6px}.aj-box label{font-size:13.5px;font-weight:600}.aj-box small{color:var(--muted);font-size:12px}
+.aj-box .inl{display:flex;gap:6px}.aj-box input{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font:600 16px var(--f-num,inherit);background:var(--surface);color:var(--ink)}
+.aj-box button{border:0;border-radius:10px;padding:0 14px;background:var(--blue);color:#fff;font-weight:700}.aj-box button.x{background:var(--line);color:var(--ink)}
+.prevhero{margin:14px 0 0;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:linear-gradient(180deg,var(--tang-soft),transparent 70%)}
+.ph-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.ph-h b{font-size:14px;color:var(--tang)}
+.ph-l{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:14px}.ph-l small{color:var(--muted);font-size:12px}
+.ph-l .neg{color:var(--danger)}.ph-l.tot{border-top:1.5px dashed var(--line);margin-top:4px;padding-top:8px;font-weight:700}.ph-l.tot b{font-size:16px;color:var(--mint)}.ph-l.tot b.neg{color:var(--danger)}
+.ph-pend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.ph-chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 10px;font-size:12.5px;cursor:pointer}.ph-chip b{color:var(--tang)}
+.ph-mais{font-size:12.5px;color:var(--muted);align-self:center}.ph-dica{display:block;color:var(--muted);font-size:11.5px;margin-top:6px}
+.fatgrp{border-radius:12px;background:var(--violet-soft);margin:4px 0}.fatgrp>summary{list-style:none;cursor:pointer}.fatgrp>summary::-webkit-details-marker{display:none}
+.fg-ic{display:inline-block;margin-right:6px;color:var(--violet);transition:transform .15s}.fatgrp[open] .fg-ic{transform:rotate(90deg)}
+.fg-itens{padding:0 0 6px 10px;border-left:3px solid var(--violet);margin-left:12px}.tx.sub{background:transparent}
 .lc-ia{color:var(--violet);font-weight:800}
 .adiantar{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;background:var(--tang-soft,#FFE9DA);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:13.5px}
 .sugbox.futura{background:var(--blue-soft)}
@@ -985,16 +998,19 @@ function resumo(m){
   for (const k in porCat) if (k!=="__sem" && !catById(k)) comprometido += porCat[k];
   const metaMensal = sum(S.cfg.metas||[], x=>+x.aporteMensal||0);
   const aporteComp = Math.max(metaMensal, guardado);
-  const sobraPrev = receitaPrev - comprometido - aporteComp;
-  const livre = entrou - saiu - guardado;
+  const sobraPrev = receitaPrev - comprometido - aporteComp + sum(L.filter(d=>d.tipo==="ajuste"), d=>+d.valor||0);
+  // ajuste manual: diferença entre o que o app calcula e o que a pessoa diz ter de verdade
+  const ajuste = sum(L.filter(d=>d.tipo==="ajuste"), d=>+d.valor||0);
+  const livre = entrou - saiu - guardado + ajuste;
   const atual = mesDe(hoje()), dia = new Date().getDate(), dim = diasNoMes(m);
   const restantes = m===atual ? dim - dia + 1 : (m>atual ? dim : 0);
   const dzPend = Math.max(0, dz - (porCat.dizimo||0));
-  const caixaLivre = receitaPrev - saiu - fixosPend - Math.max(0, metaMensal - guardado) - dzPend;
+  const guardarPend = Math.max(0, metaMensal - guardado);
+  const caixaLivre = receitaPrev - saiu - fixosPend - guardarPend - dzPend + ajuste;
   const porDia = restantes>0 ? Math.max(0, caixaLivre)/restantes : 0;
   const decorrido = m===atual ? dia/dim : (m<atual ? 1 : 0);
   return {L, gastos, receitas, aportes, entrou, saiu, guardado, receitaPrev, porCat, orc, dz, fixosStatus, fixosPend,
-          comprometido, metaMensal, sobraPrev, livre, restantes, porDia, decorrido, caixaLivre};
+          comprometido, metaMensal, sobraPrev, livre, restantes, porDia, decorrido, caixaLivre, ajuste, guardarPend, dzPend};
 }
 
 function avisos(m, R){
@@ -1107,7 +1123,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 19:40";
+const VERSAO = "12/10 16:20";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1161,6 +1177,9 @@ function viewMes(){
   const hero = `<section class="hero"><div class="confete" aria-hidden="true"><i style="background:var(--blue)"></i><i style="background:var(--tang)"></i><i style="background:var(--amber)"></i><i style="background:var(--mint)"></i><i style="background:var(--pink)"></i></div>
     <div class="eyebrow">${heroLbl} · ${mesLongo(m)}</div>
     ${big(heroVal)}
+    ${!futuro ? (memo.get("ajSaldo")===m
+      ? `<div class="aj-box"><label for="ajVal">Quanto você tem de verdade${passado?" que sobrou":" agora"}?</label><div class="inl"><input id="ajVal" inputmode="decimal" placeholder="${BRL.format(Math.round(R.livre*100)/100)}" autofocus><button data-act="confirmaAjuste:${m}">OK</button><button data-act="cancelaAjuste" class="x" aria-label="Cancelar">×</button></div><small>O app guarda a diferença como “ajuste de saldo” e recalcula o resto: sobra, quanto dá por dia, previsão.</small></div>`
+      : `<button class="aj-link" data-act="abrirAjuste:${m}">${R.ajuste ? `Inclui ajuste manual de ${R.ajuste>0?"+":"−"}${fm(Math.abs(R.ajuste))} · corrigir de novo` : "Não bate com o banco? Corrigir valor"}</button>${R.ajuste?` <button class="aj-link" data-act="limparAjuste:${m}">tirar ajuste</button>`:""}`) : ""}
     <p class="sub">${sub}</p>
     <div class="split" role="img" aria-label="Divisão da receita prevista">
       <span style="width:${pct(segE)};background:var(--blue)"></span>
@@ -1176,6 +1195,14 @@ function viewMes(){
       <span><i style="background:var(--amber)"></i>Guardar ${fm0(segG)}</span>
       <span><i style="background:var(--mint)"></i>Livre ${fm0(segL)}</span>
     </div>
+    ${!passado ? (()=>{ const pend = R.fixosStatus.filter(x=>!x.pago).sort((a,b)=>(+a.f.dia||99)-(+b.f.dia||99));
+      const linhas = [["Vai entrar no mês", R.receitaPrev, ""], ["Já saiu (gastos)", -R.saiu, ""], ["Contas que ainda vêm", -R.fixosPend, pend.length?`${pend.length} ${pend.length>1?"itens":"item"}`:"tudo pago"], ...(R.guardarPend?[["Falta guardar", -R.guardarPend, ""]]:[]), ...(R.dzPend?[["Dízimo", -R.dzPend, ""]]:[]), ...(R.ajuste?[["Ajuste manual", R.ajuste, ""]]:[])];
+      return `<div class="prevhero"><div class="ph-h"><b>Previsão de ${MES[+m.slice(5)-1]}</b><button class="aj-link" data-act="planejar:${m}">planejar</button></div>
+        ${linhas.map(([n,v,o])=>`<div class="ph-l"><span>${n}${o?` <small>${o}</small>`:""}</span><b class="num ${v<0?"neg":""}">${v<0?"−":v>0&&n!=="Vai entrar no mês"?"+":""}${fm0(Math.abs(v))}</b></div>`).join("")}
+        <div class="ph-l tot"><span>Livre até o fim do mês</span><b class="num ${R.caixaLivre<0?"neg":""}">${R.caixaLivre<0?"−":""}${fm0(Math.abs(R.caixaLivre))}</b></div>
+        ${pend.length ? `<div class="ph-pend">${pend.slice(0,8).map(x=>`<button class="ph-chip" data-act="pagarFixo:${x.f.id}" title="Marcar como pago">${esc(x.f.nome)} <b>${fm0(x.prev)}</b></button>`).join("")}${pend.length>8?`<span class="ph-mais">+${pend.length-8}</span>`:""}</div><small class="ph-dica">Toque numa conta para marcar como paga.</small>`
+          : (R.fixosStatus.length ? "" : `<button class="btn-line" data-act="planejar:${m}">Montar a previsão de contas do mês</button>`)}
+      </div>`; })() : ""}
     <dl class="kpis">
       <div><dt>Entrou</dt><dd>${fm0(R.entrou)}</dd><small>${R.receitaPrev>R.entrou?"de "+fm0(R.receitaPrev)+" previstos":"tudo recebido"}</small></div>
       <div><dt>Saiu</dt><dd>${fm0(R.saiu)}</dd><small>${R.gastos.length} lançamentos</small></div>
@@ -1357,6 +1384,16 @@ function painelReceber(){
       <div class="nm">${esc(d.divide.quem)}<small>${esc(d.desc)} · ${d.data.slice(8)}/${d.data.slice(5,7)}</small></div><div class="v">${fm(d.divide.valor)}</div></div>`).join("")}</div>
     <p class="note">Esses valores já ficaram fora do seu orçamento. Marque quando a pessoa te pagar.</p></section>`;
 }
+function grupoFatura(x){
+  const g = x.g, aberto = S.ext.abertas?.[x.venc], pagoTot = g.pag ? g.pag.valor : 0;
+  const total = sum(g.itens, d=>d.valor), adiant = g.itens.filter(d=>d.pagoEm && !d.aPagar).length;
+  const its = g.itens.slice().sort((a,b)=>a.data<b.data?1:-1);
+  return `<details class="fatgrp" data-venc="${x.venc}" ${aberto?"open":""}><summary class="tx fg-sum"><span class="d"><span class="fg-ic">▸</span>Fatura do cartão · ${MES[+x.venc.slice(5)-1]}</span><span class="val num">− ${fm(total)}</span>
+    <span class="m">${its.length} ${its.length>1?"compras":"compra"}${g.pag?` · <span class="pill g" style="font-size:11.5px">paga ${fm(pagoTot)} em ${g.pag.data.slice(8)}/${g.pag.data.slice(5,7)}</span>`:` · vence em ${mesAb(x.venc)}`}${adiant?` · ${adiant} pagas antes`:""} · toque para ver</span></summary>
+    <div class="fg-itens">${g.pag?`<button class="tx sub" data-edit="${g.pag.id}"><span class="d">Pagamento da fatura</span><span class="val num">✓ ${fm(g.pag.valor)}</span><span class="m">não entra no orçamento</span></button>`:""}
+    ${its.map(d=>`<button class="tx sub" data-edit="${d.id}"><span class="d">${esc(d.desc)}</span><span class="val num">− ${fm(d.valor)}</span><span class="m"><span class="dot" style="--cc:${corCat(d.cat)}"></span>${d.data.slice(8)}/${d.data.slice(5,7)} · ${esc(catNome(d.cat))}${d.parc?` · parcela ${d.parc}`:""}${d.pagoEm?(d.aPagar?` · adiantar em ${mesAb(d.pagoEm)}`:` · paga antes, em ${mesAb(d.pagoEm)}`):""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span></button>`).join("")}
+    <button class="aj-link" data-act="analisarFatura:${x.venc}" style="margin:6px 0 4px 12px">Analisar esta fatura</button></div></details>`;
+}
 function viewExtrato(){
   const E = S.ext;
   let L = E.todos ? [...S.lanc.entries()].map(([id,d])=>Object.assign({id},d)) : lancDoMes(S.mes);
@@ -1369,6 +1406,18 @@ function viewExtrato(){
   if (E.busca){ const b = norm(E.busca); L = L.filter(d=>norm(d.desc).includes(b) || norm(catNome(d.cat)).includes(b) || String(d.valor).includes(b)); }
   L.sort((a,b)=> a.data===b.data ? (b.criado||0)-(a.criado||0) : (a.data<b.data?1:-1));
   const tot = sum(L.filter(d=>d.tipo==="gasto"),d=>d.valor), totIn = sum(L.filter(d=>d.tipo==="receita"),d=>d.valor);
+  // compras do cartão viram subitens de "Fatura do cartão" (uma linha por fatura), para não lotar o extrato
+  const agrupar = E.tipo!=="cartao" && !E.busca && !E.cat && E.tipo!=="revisar" && !E.soltar;
+  const grupos = {};
+  if (agrupar){
+    const fora = [];
+    for (const d of L){ if (d.cartao && d.tipo==="gasto" && d.fatura){ (grupos[d.fatura] ||= {itens:[], pag:null}).itens.push(d); } else fora.push(d); }
+    for (const d of fora) if (d.tipo==="pagfatura" && d.fatura && grupos[d.fatura] && !grupos[d.fatura].pag) grupos[d.fatura].pag = d;
+    L = fora.filter(d => !(d.tipo==="pagfatura" && grupos[d.fatura]?.pag===d));
+    for (const [venc,g] of Object.entries(grupos)){ const dia = g.pag ? g.pag.data : g.itens.map(x=>x.data).sort().pop();
+      L.push({id:"fat:"+venc, _grupo:true, venc, g, data:dia, tipo:"grupo", valor: sum(g.itens, x=>x.valor), criado: 0}); }
+    L.sort((a,b)=> a.data===b.data ? (b.criado||0)-(a.criado||0) : (a.data<b.data?1:-1));
+  }
   const byDay = {}; for (const d of L) (byDay[d.data] ||= []).push(d);
   const chip = (id,n) => `<button class="chip" data-ext-tipo="${id}" aria-pressed="${E.tipo===id}">${n}</button>`;
   const catOpts = `<option value="">Todas as categorias</option>`+S.cfg.cats.map(c=>`<option value="${c.id}" ${E.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("");
@@ -1380,10 +1429,11 @@ function viewExtrato(){
     </div>
     <div class="filters">${chip("todos","Tudo")}${chip("gasto","Gastos")}${chip("receita","Receitas")}${chip("guardado","Guardado")}${chip("cartao","Cartão")}${chip("revisar","Para revisar")}</div>
     <div class="tot-line"><span>${L.length} ${L.length===1?"lançamento":"lançamentos"}</span><span class="num">saídas ${fm(tot)} · entradas ${fm(totIn)}</span></div>
-    ${L.length ? Object.keys(byDay).map(day=>`<div class="day"><div class="day-h"><span>${esc(diaSemana(day))}</span><span class="num">${fm(sum(byDay[day].filter(d=>d.tipo==="gasto"),d=>d.valor))}</span></div>
-      ${byDay[day].map(d=>{ const cls = d.tipo==="receita"?"in":(d.tipo==="aporte"||d.tipo==="resgate")?"sv":""; const sinal = d.tipo==="receita"?"+":(d.tipo==="gasto"?"−":(d.tipo==="aporte"?"→":d.tipo==="pagfatura"?"✓":"←"));
-        const lab = d.tipo==="pagfatura" ? `Pagamento da fatura de ${mesAb(d.fatura)} (não entra no orçamento)` : d.tipo==="gasto" ? catNome(d.cat) : d.tipo==="receita" ? "Receita" : d.tipo==="aporte" ? "Guardado em "+((S.cfg.metas.find(x=>x.id===d.meta)||S.cfg.metas[0]||{}).nome||"meta") : "Resgate";
-        return `<button class="tx" data-edit="${d.id}"><span class="d">${esc(d.desc)}</span><span class="val num ${cls}">${sinal} ${fm(d.valor)}</span>
+    ${L.length ? Object.keys(byDay).map(day=>`<div class="day"><div class="day-h"><span>${esc(diaSemana(day))}</span><span class="num">${fm(sum(byDay[day].filter(d=>d.tipo==="gasto"||d.tipo==="grupo"),d=>d.valor))}</span></div>
+      ${byDay[day].map(d=>{ if (d._grupo) return grupoFatura(d);
+        const cls = d.tipo==="receita"?"in":(d.tipo==="aporte"||d.tipo==="resgate")?"sv":""; const sinal = d.tipo==="ajuste" ? (d.valor>=0?"+":"−") : d.tipo==="receita"?"+":(d.tipo==="gasto"?"−":(d.tipo==="aporte"?"→":d.tipo==="pagfatura"?"✓":"←"));
+        const lab = d.tipo==="ajuste" ? "Ajuste manual de saldo (toque para tirar)" : d.tipo==="pagfatura" ? `Pagamento da fatura de ${mesAb(d.fatura)} (não entra no orçamento)` : d.tipo==="gasto" ? catNome(d.cat) : d.tipo==="receita" ? "Receita" : d.tipo==="aporte" ? "Guardado em "+((S.cfg.metas.find(x=>x.id===d.meta)||S.cfg.metas[0]||{}).nome||"meta") : "Resgate";
+        return `<button class="tx" ${d.tipo==="ajuste"?`data-act="limparAjuste:${d.mes}"`:`data-edit="${d.id}"`}><span class="d">${esc(d.desc)}</span><span class="val num ${cls}">${sinal} ${fm(Math.abs(d.valor))}</span>
           <span class="m">${d.tipo==="gasto"?`<span class="dot" style="--cc:${corCat(d.cat)}"></span>`:""}${esc(lab)}${d.parc?` · parcela ${d.parc}`:""}${d.fixo?" · fixa":""}${d.cartao?` · cartão, fatura de ${mesAb(d.fatura)}${d.pagoEm?(d.aPagar?` · adiantar em ${mesAb(d.pagoEm)}`:` · paga antes, em ${mesAb(d.pagoEm)}`):d.mes!==mesDe(d.data)?` (conta em ${mesAb(d.mes)})`:""}`:""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span>${d.divide?`<span class="m"><span class="pill ${d.divide.recebido?"g":"y"}" style="font-size:11.5px">${esc(d.divide.quem)} ${d.divide.recebido?"pagou":"vai pagar"} ${fm(d.divide.valor)} · total ${fm(d.valorTotal)}</span></span>`:""}${d.nota?`<span class="m nota">“${esc(d.nota)}”</span>`:""}</button>`; }).join("")}</div>`).join("")
       : `<div class="empty"><b>Nada por aqui</b>${E.busca||E.cat||E.tipo!=="todos"?"Nenhum lançamento com esses filtros.":"Lance o primeiro gasto na barra lá em cima: “50 gasolina”."}</div>`}
   </div>`;
@@ -2085,6 +2135,19 @@ async function acao(a, el){
   const m = S.mes, R = () => resumo(m);
   switch(cmd){
     case "noop": return;
+    case "abrirAjuste": memo.set("ajSaldo", arg); render(); setTimeout(()=>$("#ajVal")?.focus(), 30); return;
+    case "cancelaAjuste": memo.delete("ajSaldo"); render(); return;
+    case "confirmaAjuste": { const m = arg; const txt = ($("#ajVal")?.value||"").trim(); memo.delete("ajSaldo"); if (!txt){ render(); return; }
+      const real = parseValor(txt.replace(/^[−-]\s*/,"")) * (/^[−-]/.test(txt) ? -1 : 1); if (!isFinite(real)){ render(); return; }
+      const R = resumo(m); const dif = r2(real - R.livre); if (Math.abs(dif) < 0.01){ toast("Já estava batendo."); render(); return; }
+      const ex = [...S.lanc.entries()].find(([,d])=>d.tipo==="ajuste" && d.mes===m);
+      const data = m===mesDe(hoje()) ? hoje() : m+"-"+String(diasNoMes(m)).padStart(2,"0");
+      const antes = ex ? Object.assign({}, ex[1]) : null; const id = ex ? ex[0] : uid();
+      const novo = r2((ex ? +ex[1].valor||0 : 0) + dif);
+      if (Math.abs(novo) < 0.01 && ex) await apagarLanc(id); else await gravarLanc(id, {tipo:"ajuste", valor:novo, desc:"Ajuste de saldo", data, origem:"ajuste", criado: Date.now()});
+      toast(`Ajustado: ${dif>0?"+":"−"}${fm(Math.abs(dif))}. Agora mostra ${fm(real)}.`, async()=>{ if (antes) await gravarLanc(id, antes); else await apagarLanc(id); toast("Desfeito"); }); return; }
+    case "limparAjuste": { const ex = [...S.lanc.entries()].filter(([,d])=>d.tipo==="ajuste" && d.mes===arg); for (const [id] of ex) await apagarLanc(id);
+      toast("Ajuste removido.", async()=>{ for (const [id,d] of ex) await gravarLanc(id, d); }); return; }
     case "go": S.view = arg; render(); window.scrollTo(0,0); return;
     case "cat": S.view="extrato"; S.ext = {busca:"",tipo:"todos",cat:arg,todos:false}; render(); window.scrollTo(0,0); return;
     case "busca": S.view="extrato"; S.ext = {busca:arg,tipo:"todos",cat:"",todos:false}; render(); return;
@@ -2348,6 +2411,7 @@ Responda em português do Brasil, direto, com números exatos da fatura, em até
   }
 });
 document.addEventListener("keydown", e=>{ if (e.key==="Escape") fecharFolha(); });
+document.addEventListener("toggle", e=>{ const d = e.target; if (d?.classList?.contains("fatgrp")){ (S.ext.abertas ||= {})[d.dataset.venc] = d.open; } }, true);
 window.addEventListener("scroll", ()=>$("#top").classList.toggle("scrolled", window.scrollY>4), {passive:true});
 
 /* ---------- conexão ---------- */
