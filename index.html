@@ -432,6 +432,12 @@ main{max-width:1120px;margin:18px auto 0}
 .sheet:has(.batch){max-width:900px}
 .batch input[type=text]:not(.n){min-width:170px}
 .batch-wrap table{min-width:760px}
+body.deslogado .quick,body.deslogado .tabs,body.deslogado .tabs-top,body.deslogado .month,body.deslogado .sync,body.deslogado #banner .banner{display:none}
+.entrada{min-height:70vh;display:grid;place-items:center}
+.entrada-card{background:var(--surface);border-radius:20px;padding:32px 24px;max-width:440px;width:100%;text-align:center;box-shadow:0 10px 30px -16px rgba(20,27,52,.2)}
+.entrada-card .confete{justify-content:center}
+.entrada h1{font-size:30px;letter-spacing:-.03em;margin:0 0 8px}
+.entrada .lead{color:var(--muted);margin:0 0 22px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -452,7 +458,7 @@ main{max-width:1120px;margin:18px auto 0}
       <label class="qfield">
         <span class="sr">Lançar</span>
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v12M3 9h12"/></svg>
-        <textarea id="q" rows="1" autocomplete="off" spellcheck="false" placeholder="50 gasolina · recebi 2031 salário · guardei 400 casa"></textarea>
+        <textarea id="q" rows="1" autocomplete="off" spellcheck="false" placeholder="50 gasolina · recebi 2500 salário · guardei 400 poupança"></textarea>
       </label>
       <button class="iconbtn" id="shotBtn" title="Ler print ou foto da fatura" aria-label="Ler print ou foto"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="5" width="15" height="11" rx="2"/><circle cx="10" cy="10.5" r="3"/><path d="M7 5l1.2-2h3.6L13 5"/></svg></button>
       <button class="iconbtn" id="fileBtn" title="Importar extrato (CSV do Nubank) ou colar vários" aria-label="Importar extrato"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 3v10M6 9l4 4 4-4M3.5 15.5h13"/></svg></button>
@@ -514,38 +520,38 @@ const CFG_PADRAO = {
   v:1,
   cats:[
     {id:"dizimo",nome:"Dízimo",grupo:"essencial",orc:0},
-    {id:"moradia",nome:"Casa e contas",grupo:"essencial",orc:300},
-    {id:"mercado",nome:"Mercado",grupo:"essencial",orc:400},
-    {id:"transporte",nome:"Transporte",grupo:"essencial",orc:930},
-    {id:"saude",nome:"Saúde",grupo:"essencial",orc:150},
-    {id:"pet",nome:"Zoe",grupo:"essencial",orc:80},
+    {id:"moradia",nome:"Casa e contas",grupo:"essencial",orc:0},
+    {id:"mercado",nome:"Mercado",grupo:"essencial",orc:0},
+    {id:"transporte",nome:"Transporte",grupo:"essencial",orc:0},
+    {id:"saude",nome:"Saúde",grupo:"essencial",orc:0},
+    {id:"pet",nome:"Pet",grupo:"essencial",orc:0},
     {id:"estudos",nome:"Estudos e impostos",grupo:"essencial",orc:0},
-    {id:"saidas",nome:"Saídas",grupo:"estilo",orc:400},
-    {id:"delivery",nome:"Delivery",grupo:"estilo",orc:200},
-    {id:"diaadia",nome:"Dia a dia",grupo:"estilo",orc:350},
-    {id:"futebol",nome:"Futebol",grupo:"estilo",orc:60},
-    {id:"compras",nome:"Compras",grupo:"estilo",orc:100},
-    {id:"cuidados",nome:"Cabelo e cuidados",grupo:"estilo",orc:30},
+    {id:"saidas",nome:"Saídas",grupo:"estilo",orc:0},
+    {id:"delivery",nome:"Delivery",grupo:"estilo",orc:0},
+    {id:"diaadia",nome:"Dia a dia",grupo:"estilo",orc:0},
+    {id:"futebol",nome:"Futebol",grupo:"estilo",orc:0},
+    {id:"compras",nome:"Compras",grupo:"estilo",orc:0},
+    {id:"cuidados",nome:"Cabelo e cuidados",grupo:"estilo",orc:0},
     {id:"presentes",nome:"Presentes",grupo:"estilo",orc:0},
     {id:"viagem",nome:"Viagem",grupo:"estilo",orc:0},
-    {id:"jogos",nome:"Jogos",grupo:"assin",orc:50},
-    {id:"streaming",nome:"Streaming e apps",grupo:"assin",orc:50},
+    {id:"jogos",nome:"Jogos",grupo:"assin",orc:0},
+    {id:"streaming",nome:"Streaming e apps",grupo:"assin",orc:0},
     {id:"outros",nome:"Outros",grupo:"outros",orc:0}
   ],
   receitas:[], fixos:[], metas:[], regras:{}, pulados:{},
   dizimo:{ativo:true,pct:10}, autoFixos:true,
-  cartao:{nome:"Nubank", fechamento:3, vencimento:10}
+  cartao:{nome:"Cartão", fechamento:3, vencimento:10}
 };
 const COMPRA_PADRAO = ["mercado","delivery","saidas","diaadia","transporte","pet","futebol","cuidados","saude"];
 const PALAVRAS = [
   ["dizimo",/dizimo|igreja|oferta/],
   ["streaming",/spotify|netflix|hbo|\bmax\b|prime video|amazon prime|disney|youtube|google one|icloud|apple\.com|deezer|globoplay|chatgpt|claude/],
-  ["jogos",/game ?pass|xbox|steam|eneba|playstation|\bpsn\b|nuuvem|nintendo|elden/],
+  ["jogos",/game ?pass|xbox|steam|eneba|playstation|\bpsn\b|nuuvem|nintendo/],
   ["delivery",/ifood|rappi|99 ?food|aiqfome|ze delivery/],
   ["mercado",/mercado(?! ?livre| ?pago)|supermerc|bigmais|big mais|coelho diniz|atacad|assai|padaria|acougue|hortifruti|sacolao|carrefour|bretas|epa\b|compras pt/],
   ["transporte",/posto|ipiranga|shell|petrobras|br mania|gasolina|combust|\b99\b|99app|99 app|uber|pedagio|estacion|moto|oleo|seguro|auto ?pecas|ale\b|sem parar|veloe/],
   ["saude",/farmacia|drogaria|droga|raia|pacheco|rd saude|araujo|medic|clinica|dentista|dente|laborat|academia|totalpass|smart ?fit|remedio|colirio|exame/],
-  ["pet",/racao|pet|veterin|reino animal|cobasi|petz|zoe/],
+  ["pet",/racao|pet|veterin|reino animal|cobasi|petz/],
   ["moradia",/aluguel|energia|cemig|copasa|saae|agua|internet|claro|vivo|\btim\b|galao|\bgas\b|condominio/],
   ["saidas",/\bbar\b|restaurante|pizza|lanche|burger|hamburg|acai|sorvet|cinema|ingresso|show|chopp|churras|lanchonete|cafe|boteco|saida/],
   ["futebol",/futebol|quadra|society|camisa fut|pelada/],
@@ -915,7 +921,21 @@ function renderTabs(){
   $("#curM").textContent = mesCurto(S.mes);
   $("#curM").setAttribute("aria-label", mesLongo(S.mes));
 }
+function viewEntrada(){
+  const carregando = S.online===null;
+  return `<div class="entrada">
+    <div class="entrada-card">
+      <div class="confete" aria-hidden="true" style="position:static;margin-bottom:18px"><i style="background:var(--blue)"></i><i style="background:var(--tang)"></i><i style="background:var(--amber)"></i><i style="background:var(--mint)"></i><i style="background:var(--pink)"></i></div>
+      <h1>Caderneta</h1>
+      <p class="lead">Controle financeiro pessoal: lance gastos e receitas em uma linha, acompanhe o orçamento do mês e as metas de poupança.</p>
+      ${carregando ? `<p class="note">Carregando…</p>`
+        : S.modo==="firebase" ? `<button class="btn green" data-act="login" style="padding:12px 22px;font-size:15px">Entrar com Google</button><p class="note" style="margin-top:14px">Seus dados ficam na sua conta e só aparecem depois de entrar.</p>`
+        : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
+    </div></div>`;
+}
 function render(){
+  document.body.classList.toggle("deslogado", !S.db);
+  if (!S.db){ renderTabs(); $("#view").innerHTML = viewEntrada(); return; }
   renderTabs();
   const v = $("#view");
   const scroll = window.scrollY;
@@ -1220,7 +1240,7 @@ function viewAjustes(){
     <section class="panel"><div class="panel-h"><h2 style="--hc:var(--sky)">Atalhos de digitação</h2></div>
       <table class="ledger">
         <tr><td>50 gasolina</td><td>gasto, categoria automática</td><td></td></tr>
-        <tr><td>recebi 2031 salário</td><td>receita</td><td></td></tr>
+        <tr><td>recebi 2500 salário</td><td>receita</td><td></td></tr>
         <tr><td>guardei 400 casa</td><td>vai para a meta</td><td></td></tr>
         <tr><td>tênis 600 6x</td><td>6 parcelas de R$ 100</td><td></td></tr>
         <tr><td>pizza 78 ontem</td><td>com data</td><td></td></tr>
@@ -1231,7 +1251,7 @@ function viewAjustes(){
     </section>
     <section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">Cartão de crédito</h2></div>
       <div class="form-rows">
-        <div class="frow" style="grid-template-columns:1fr 130px"><span>Nome</span><input data-cfg="cartao.nome" value="${esc(C.cartao?.nome||"Nubank")}"></div>
+        <div class="frow" style="grid-template-columns:1fr 130px"><span>Nome</span><input data-cfg="cartao.nome" value="${esc(C.cartao?.nome||"Cartão")}"></div>
         <div class="frow" style="grid-template-columns:1fr 80px"><span>Fatura fecha no dia</span><input class="n" data-cfg="cartao.fechamento" data-int value="${C.cartao?.fechamento||""}" inputmode="numeric"></div>
         <div class="frow" style="grid-template-columns:1fr 80px"><span>Vence no dia</span><input class="n" data-cfg="cartao.vencimento" data-int value="${C.cartao?.vencimento||""}" inputmode="numeric"></div>
       </div>
@@ -1421,7 +1441,7 @@ function contextoIA(){
   const itens = Object.values(S.hist).sort((a,b)=>a.mes<b.mes?-1:1).map(h=>`${h.mes}: `+(h.itens||[]).map(i=>`${i[0]} ${Math.round(Math.max(i[2],i[3]))}`).join("; ")).join("\n");
   const lanc = [...S.lanc.values()].sort((a,b)=>a.data<b.data?1:-1).slice(0,400).map(d=>`${d.data} ${d.tipo} ${d.valor.toFixed(2)} ${d.desc} [${d.tipo==="gasto"?catNome(d.cat):""}]`).join("\n");
   const R = resumo(mesDe(hoje()));
-  return `Dados financeiros de Paulo (valores em R$).
+  return `Dados financeiros do usuário (valores em R$).
 HOJE: ${hoje()}
 MÊS ATUAL: entrou ${R.entrou.toFixed(2)}, receita prevista ${R.receitaPrev.toFixed(2)}, saiu ${R.saiu.toFixed(2)}, guardou ${R.guardado.toFixed(2)}, sobra prevista ${R.sobraPrev.toFixed(2)}.
 ORÇAMENTO POR CATEGORIA (previsto/gasto no mês): ${S.cfg.cats.map(c=>`${c.nome} ${R.orc(c.id).toFixed(0)}/${(R.porCat[c.id]||0).toFixed(0)}`).join("; ")}
@@ -1575,6 +1595,7 @@ async function acao(a, el){
       let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:(r.tipo==="aporte"||r.tipo==="resgate")?(r.meta||S.cfg.metas[0]?.id):null, rec:r.tipo==="receita"?r.rec:null, data:r.data, parcelas:r.parcelas||1, cartao:!!r.cartao, fatura:r.fatura||null, parcInfo:r.parcInfo||null, origem:"importado"})); }
       toast(`${rows.length} lançamentos adicionados`, async()=>{ for (const id of all) await apagarLanc(id); toast("Desfeito"); }); return; }
     case "abrirImport": folhaColar(); return;
+    case "login": try{ await FB.authM.signInWithPopup(FB.auth, new FB.authM.GoogleAuthProvider()); }catch(e){ try{ await FB.authM.signInWithRedirect(FB.auth, new FB.authM.GoogleAuthProvider()); }catch(e2){ toast("Não deu para entrar agora."); } } return;
     case "cartaoExtrato": S.view="extrato"; S.ext = {busca:"",tipo:"cartao",cat:"",todos:true}; render(); window.scrollTo(0,0); return;
     case "togComp": { const c = catById(arg); if (!c) return; c.comp = contaNaCompra(arg) ? "fatura" : "compra"; salvarCfg(true);
       for (const [id,d] of S.lanc) if (d.cartao && d.cat===arg){ const nm = mesEfetivo(d); if (nm!==d.mes) gravarLanc(id, d); } return; }
@@ -1705,7 +1726,7 @@ async function iniciarFirebase(){
     const auth = authM.getAuth(app);
     FB = {authM, auth, fsM, fdb, app};
     authM.onAuthStateChanged(auth, u=>{
-      if (!u){ S.online = false; S.db = null; bannerLogin(); render(); return; }
+      if (!u){ S.online = false; S.db = null; $("#banner").innerHTML = ""; render(); return; }
       if (S.db) return;
       $("#banner").innerHTML = "";
       S.ai = iaGemini(); atualizarPreview();
