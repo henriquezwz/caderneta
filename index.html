@@ -383,6 +383,8 @@ main{max-width:1120px;margin:18px auto 0}
 .hbar .t{height:12px;border-radius:999px} .hbar .t i{border-radius:999px;background:var(--cc,var(--blue))}
 .toast{background:var(--ink)}
 .banner{background:var(--amber-soft)}
+.banner.visit{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--blue-soft);border-radius:12px;padding:12px 14px}
+.banner.visit .btn{white-space:nowrap}
 .frow input:focus,.frow select:focus,.ask input:focus{border-color:var(--blue)}
 .themes{display:inline-flex;border-radius:999px;background:var(--sunk);padding:3px}
 .themes button{border:0;background:none;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--muted)}
@@ -520,26 +522,26 @@ const CFG_PADRAO = {
   v:1,
   cats:[
     {id:"dizimo",nome:"Dízimo",grupo:"essencial",orc:0},
-    {id:"moradia",nome:"Casa e contas",grupo:"essencial",orc:0},
-    {id:"mercado",nome:"Mercado",grupo:"essencial",orc:0},
-    {id:"transporte",nome:"Transporte",grupo:"essencial",orc:0},
-    {id:"saude",nome:"Saúde",grupo:"essencial",orc:0},
-    {id:"pet",nome:"Pet",grupo:"essencial",orc:0},
-    {id:"estudos",nome:"Estudos e impostos",grupo:"essencial",orc:0},
-    {id:"saidas",nome:"Saídas",grupo:"estilo",orc:0},
-    {id:"delivery",nome:"Delivery",grupo:"estilo",orc:0},
-    {id:"diaadia",nome:"Dia a dia",grupo:"estilo",orc:0},
-    {id:"futebol",nome:"Futebol",grupo:"estilo",orc:0},
-    {id:"compras",nome:"Compras",grupo:"estilo",orc:0},
-    {id:"cuidados",nome:"Cabelo e cuidados",grupo:"estilo",orc:0},
+    {id:"moradia",nome:"Casa e contas",grupo:"essencial",orc:800},
+    {id:"mercado",nome:"Mercado",grupo:"essencial",orc:600},
+    {id:"transporte",nome:"Transporte",grupo:"essencial",orc:400},
+    {id:"saude",nome:"Saúde",grupo:"essencial",orc:200},
+    {id:"pet",nome:"Pet",grupo:"essencial",orc:100},
+    {id:"estudos",nome:"Estudos e impostos",grupo:"essencial",orc:150},
+    {id:"saidas",nome:"Saídas",grupo:"estilo",orc:300},
+    {id:"delivery",nome:"Delivery",grupo:"estilo",orc:150},
+    {id:"diaadia",nome:"Dia a dia",grupo:"estilo",orc:300},
+    {id:"futebol",nome:"Esporte e lazer",grupo:"estilo",orc:100},
+    {id:"compras",nome:"Compras",grupo:"estilo",orc:200},
+    {id:"cuidados",nome:"Cabelo e cuidados",grupo:"estilo",orc:80},
     {id:"presentes",nome:"Presentes",grupo:"estilo",orc:0},
     {id:"viagem",nome:"Viagem",grupo:"estilo",orc:0},
-    {id:"jogos",nome:"Jogos",grupo:"assin",orc:0},
-    {id:"streaming",nome:"Streaming e apps",grupo:"assin",orc:0},
+    {id:"jogos",nome:"Jogos",grupo:"assin",orc:50},
+    {id:"streaming",nome:"Streaming e apps",grupo:"assin",orc:60},
     {id:"outros",nome:"Outros",grupo:"outros",orc:0}
   ],
-  receitas:[], fixos:[], metas:[], regras:{}, pulados:{},
-  dizimo:{ativo:true,pct:10}, autoFixos:true,
+  receitas:[{id:"salario",nome:"Salário",valor:0,dia:5}], fixos:[], metas:[{id:"reserva",nome:"Reserva de emergência",alvo:10000,aporteMensal:0,saldoBase:0,dataBase:"2000-01-01",historico:[]}], regras:{}, pulados:{},
+  dizimo:{ativo:false,pct:10}, autoFixos:true,
   cartao:{nome:"Cartão", fechamento:3, vencimento:10}
 };
 const COMPRA_PADRAO = ["mercado","delivery","saidas","diaadia","transporte","pet","futebol","cuidados","saude"];
@@ -950,7 +952,7 @@ function render(){
   if (fk){ const n = v.querySelector(fk); if (n){ n.focus({preventScroll:true}); if (sel && sel[0]!=null){ try{ n.setSelectionRange(sel[0], sel[1]); }catch(e){} } } }
   const sy = $("#sync");
   sy.className = "sync " + (S.db ? "ok" : (S.online===null ? "" : "off"));
-  sy.querySelector("span").textContent = S.db ? "salvo" : (S.online===null ? "conectando" : "só neste aparelho");
+  sy.querySelector("span").textContent = S.visitante ? "neste navegador" : S.db ? "salvo" : (S.online===null ? "conectando" : "só neste aparelho");
 }
 
 function viewMes(){
@@ -1726,18 +1728,44 @@ async function iniciarFirebase(){
     const auth = authM.getAuth(app);
     FB = {authM, auth, fsM, fdb, app};
     authM.onAuthStateChanged(auth, u=>{
-      if (!u){ S.online = false; S.db = null; $("#banner").innerHTML = ""; render(); return; }
-      if (S.db) return;
+      if (!u){ if (S.visitante) return; S.visitante = true; S.ai = null;
+        conectar(adaptadorLocal(), "visitante"); bannerVisitante(); return; }
+      if (S.uidFb === u.uid) return;
+      S.uidFb = u.uid; S.visitante = false;
       $("#banner").innerHTML = "";
       S.ai = iaGemini(); atualizarPreview();
       conectar(adaptadorFirestore(fsM, fdb), `caderneta/${u.uid}`);
     });
   }catch(e){ S.online = false; banner("Não consegui conectar ao Firebase. Confira a internet e recarregue."); render(); }
 }
+function bannerVisitante(){
+  $("#banner").innerHTML = `<div class="banner visit"><span><b>Modo visitante.</b> Pode usar à vontade: as categorias são de exemplo e o que você lançar fica só neste navegador. Entre com Google para guardar na nuvem e usar em qualquer aparelho.</span><button class="btn green" data-act="login">Entrar com Google</button></div>`;
+}
 function bannerLogin(){
   $("#banner").innerHTML = `<div class="banner" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>Entre com sua conta Google para salvar e sincronizar entre aparelhos.</span><button class="btn green" id="loginBtn">Entrar com Google</button></div>`;
   $("#loginBtn").onclick = async ()=>{ try{ await FB.authM.signInWithPopup(FB.auth, new FB.authM.GoogleAuthProvider()); }catch(e){ try{ await FB.authM.signInWithRedirect(FB.auth, new FB.authM.GoogleAuthProvider()); }catch(e2){ toast("Não deu para entrar agora."); } } };
 }
+function adaptadorLocal(){
+  const KEY = "caderneta-visitante"; let st = null;
+  try{ st = JSON.parse(localStorage.getItem(KEY) || "null"); }catch(e){}
+  st ||= {docs:{}};
+  const subs = new Set();
+  const salvar = () => { try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){} subs.forEach(f => f()); };
+  const meta = {fromCache:false, hasPendingWrites:false};
+  const snapDoc = path => ({id:path.split("/").pop(), exists: path in st.docs, data: () => st.docs[path], metadata: meta});
+  const colRef = path => ({
+    doc: id => docRef(path+"/"+id),
+    onSnapshot: next => { const pre = path+"/"; const f = () => next({docs: Object.keys(st.docs).filter(k => k.startsWith(pre) && !k.slice(pre.length).includes("/")).map(snapDoc), metadata: meta}); subs.add(f); setTimeout(f, 0); return () => subs.delete(f); }
+  });
+  const docRef = path => ({
+    set: async d => { st.docs[path] = JSON.parse(JSON.stringify(d)); salvar(); },
+    delete: async () => { delete st.docs[path]; salvar(); },
+    onSnapshot: next => { const f = () => next(snapDoc(path)); subs.add(f); setTimeout(f, 0); return () => subs.delete(f); },
+    collection: sub => colRef(path+"/"+sub)
+  });
+  return {doc: docRef};
+}
+let desligar = [];
 function adaptadorFirestore(fs, fdb){
   const snapDoc = s => ({id:s.id, exists:s.exists(), data:()=>s.data(), metadata:s.metadata});
   const colRef = path => ({
@@ -1753,21 +1781,23 @@ function adaptadorFirestore(fs, fdb){
   return {doc: docRef};
 }
 function conectar(db, base){
-  S.db = db; S.online = true; $("#banner").innerHTML = "";
+  desligar.forEach(f => { try{ f(); }catch(e){} }); desligar = [];
+  S.lanc = new Map(); S.hist = {}; S.cfg = clone(CFG_PADRAO); S.gotLanc = false; S.gotCfg = false; S.lancServidor = false; S.autoDone = false;
+  S.db = db; S.online = true; if (!S.visitante) $("#banner").innerHTML = "";
   cfgRef = db.doc(base);
   lancCol = cfgRef.collection("lanc");
   histCol = cfgRef.collection("hist");
-  cfgRef.onSnapshot(snap=>{
+  desligar.push(cfgRef.onSnapshot(snap=>{
     S.gotCfg = true;
     if (snap.exists){ if (!cfgWriting && !cfgDirty){ S.cfg = Object.assign(clone(CFG_PADRAO), clone(snap.data())); S.cfg.regras ||= {}; S.cfg.pulados ||= {}; } S.cfgExists = true; }
     render(); if (S.lancServidor && !snap.metadata.fromCache) autoFixos();
-  }, ()=>{ S.gotLanc = true; render(); banner(S.modo==="firebase" ? "O Firebase recusou o acesso aos dados. Confira as regras do Firestore (coleção caderneta)." : "Não consegui ler seus dados. Recarregue a página."); });
-  lancCol.onSnapshot(snap=>{
+  }, ()=>{ S.gotLanc = true; render(); banner(S.modo==="firebase" ? "O Firebase recusou o acesso aos dados. Confira as regras do Firestore (coleção caderneta)." : "Não consegui ler seus dados. Recarregue a página."); }));
+  desligar.push(lancCol.onSnapshot(snap=>{
     S.lanc = new Map(snap.docs.map(d=>[d.id, d.data()]));
     S.gotLanc = true; S.lancServidor = S.lancServidor || !snap.metadata.fromCache;
     render(); if (S.gotCfg && S.lancServidor) autoFixos();
-  }, e=>{ S.gotLanc = true; render(); banner(S.modo==="firebase" ? "O Firebase recusou o acesso aos dados. Confira as regras do Firestore (coleção caderneta)." : "A sincronização caiu. Recarregue a página."); });
-  histCol.onSnapshot(snap=>{ const h = {}; for (const d of snap.docs) h[d.id] = d.data(); S.hist = h; render(); }, ()=>{});
+  }, e=>{ S.gotLanc = true; render(); banner(S.modo==="firebase" ? "O Firebase recusou o acesso aos dados. Confira as regras do Firestore (coleção caderneta)." : "A sincronização caiu. Recarregue a página."); }));
+  desligar.push(histCol.onSnapshot(snap=>{ const h = {}; for (const d of snap.docs) h[d.id] = d.data(); S.hist = h; render(); }, ()=>{}));
 }
 async function importarBackup(txt){
   let b; try{ b = JSON.parse(txt); }catch(e){ toast("Esse arquivo não é um backup da Caderneta."); return; }
