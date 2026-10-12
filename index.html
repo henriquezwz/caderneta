@@ -478,6 +478,17 @@ main{max-width:1120px;margin:18px auto 0}
 .aj-box{margin:6px 0 4px;display:grid;gap:6px}.aj-box label{font-size:13.5px;font-weight:600}.aj-box small{color:var(--muted);font-size:12px}
 .aj-box .inl{display:flex;gap:6px}.aj-box input{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font:600 16px var(--f-num,inherit);background:var(--surface);color:var(--ink)}
 .aj-box button{border:0;border-radius:10px;padding:0 14px;background:var(--blue);color:#fff;font-weight:700}.aj-box button.x{background:var(--line);color:var(--ink)}
+.ph-l b,.ph-v{white-space:nowrap}
+.ph-sec{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
+.ph-tit{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ph-tk{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--line);background:var(--surface);display:inline-grid;place-items:center;color:#fff;padding:0;cursor:pointer}.ph-tk.on,.ph-it.ok .ph-tk{background:var(--mint);border-color:var(--mint)}
+.ph-v{background:none;border:0;padding:0;font:700 14px var(--f-num,inherit);color:var(--danger);text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
+.ph-it{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 6px 3px 4px}.ph-it .ph-tk{width:20px;height:20px;border-radius:999px}
+.ph-it.ok{opacity:.7}.ph-it.ok .ph-nm{text-decoration:line-through}
+.ph-nm{background:none;border:0;padding:2px 2px;font-size:12.5px;color:var(--ink);cursor:pointer}.ph-nm b{color:var(--tang)}.ph-x{background:none;border:0;color:var(--muted);font-size:15px;padding:0 2px;cursor:pointer}
+.ph-add{display:flex;gap:6px;margin-top:8px}.ph-add input{flex:1;min-width:0;padding:9px 12px;border:1.5px dashed var(--tang);border-radius:10px;font:15px var(--f-ui);background:var(--surface);color:var(--ink)}
+.ph-add button{border:0;border-radius:10px;background:var(--tang);color:#fff;font-weight:800;font-size:18px;padding:0 14px;cursor:pointer}
+.prevhero .inl{display:flex;gap:4px}.prevhero .inl input{width:96px;padding:5px 8px;border:1.5px solid var(--line);border-radius:8px;font-size:15px}.prevhero .inl button{border:0;border-radius:8px;background:var(--blue);color:#fff;font-weight:700;padding:0 10px}
 .prevhero{margin:14px 0 0;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:linear-gradient(180deg,var(--tang-soft),transparent 70%)}
 .ph-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.ph-h b{font-size:14px;color:var(--tang)}
 .ph-l{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:14px}.ph-l small{color:var(--muted);font-size:12px}
@@ -691,7 +702,7 @@ const PALAVRAS = [
   ["saude",/farmacia|drogaria|droga|\braia\b|pacheco|rd saude|araujo|pague menos|panvel|nissei|venancio|extrafarma|ultrafarma|drogal|medic|clinica|hospital|consulta|dentista|odonto|\bdente|laborat|pardini|fleury|sabin|academia|totalpass|gympass|wellhub|smart ?fit|bluefit|bodytech|selfit|remedio|colirio|exame|unimed|hapvida|\bamil\b|sulamerica|psicolog|fisioter|nutricion|\botica|oculos/],
   ["pet",/racao|\bpet|veterin|\bvet\b|reino animal|cobasi|petz|petlove|agropecuar|banho e tosa|\bzoe\b/],
   ["moradia",/aluguel|energia|cemig|copasa|saae|\bagua\b|internet|\bclaro\b|\bvivo\b|\btim\b|\boi fibra|net virtua|\bsky\b|galao|\bgas\b|ultragaz|liquigas|supergasbras|condominio|\benel\b|cpfl|celesc|copel|neoenergia|equatorial|energisa|sabesp|cedae|embasa|compesa|sanepar|brisanet|algar|leroy|telhanorte|material de constru|madeireira|ferrag|eletrica|tok ?stok|camicado|mobly/],
-  ["saidas",/\bbar\b|\bbares\b|restaurante|\brest\b|pizza|lanche|burger|burguer|hamburg|mc ?donald|\bbk\b|subway|habib|giraffas|outback|madero|coco bambu|spoleto|china in box|\bbobs\b|\bkfc\b|popeyes|starbucks|cacau show|kopenhagen|chocolat|acai|sorvet|gelato|cinema|cinemark|cinepolis|ingresso|sympla|eventim|ticket|\bshow|chopp|cervej|choperia|churras|espetinho|lanchonete|\bcafe|boteco|botequim|saida|petisc|pastel|esfiha|sushi|temaki|japones|cantina|bistro|grill|steak|food|trattoria|tapioca|crepe|doceria|confeitaria|brigadeir|\bbolo|salgad|coxinha|quiosque|adega|\bbeer|\bpub\b|balada|boate|espetaria|petiscaria|rodizio|self service|marmit|quentinha|comida/],
+  ["saidas",/\bbar\b|\bbares\b|restaurante|\brest\b|pizza|lanche|burger|burguer|hamburg|mc ?donald|\bbk\b|subway|habib|giraffas|outback|madero|coco bambu|spoleto|china in box|\bbobs\b|\bkfc\b|popeyes|starbucks|cacau show|kopenhagen|chocolat|acai|sorvet|gelato|cinema|cinemark|cinepolis|ingresso|sympla|eventim|ticket|\bshow|chopp|cervej|choperia|churras|espetinho|lanchonete|\bcafe|boteco|botequim|saida|petisc|pastel|esfiha|sushi|temaki|japones|cantina|bistro|grill|steak|food|trattoria|tapioca|crepe|doceria|confeitaria|brigadeir|\bbolo|salgad|coxinha|quiosque|adega|\bbeer|\bpub\b|balada|boate|espetaria|petiscaria|rodizio|self service|marmit|quentinha|comida|jantar|almoco|janta\b|happy hour|rolê|role\b|aniversario/],
   ["futebol",/futebol|quadra|society|camisa fut|pelada|futsal|soccer/],
   ["cuidados",/cabelo|cabeleir|barbearia|barbeiro|barber|salao|manicure|esmalteria|estetica|depila|sobrancelha|perfum|boticario|\bnatura\b|eudora|\bavon\b|sephora|berenice|jequiti|cosmetic|beleza|beauty/],
   ["presentes",/presente|amigo oculto|\bgift|floricultura|\bflores\b/],
@@ -974,12 +985,33 @@ async function lancarParsed(p, opts={}){
 }
 
 /* ---------- cálculos do mês ---------- */
+/* Modo "fatura é um item só" (padrão): compras do cartão não entram no orçamento do mês.
+   O que sai do mês é o pagamento da fatura (e adiantamentos). As compras ficam para análise. */
+const modoFatura = () => S.cfg.faturaItem !== false;
+function cartaoDoMes(m){
+  const fi = faturaInfo(m), prox = addMes(m,1), fp = faturaInfo(prox);
+  const pags = [...S.lanc.entries()].filter(([,d])=>d.tipo==="pagfatura" && d.fatura===m);
+  const pagoAntes = sum(pags.filter(([,d])=>mesDe(d.data) < m), ([,d])=>d.valor);
+  const pagoMes = sum(pags.filter(([,d])=>mesDe(d.data)===m), ([,d])=>d.valor);
+  const auto = Math.max(0, r2(fi.total - fi.pagoItens - pagoAntes));
+  const ov = S.cfg.planos?.[m]?.__cartao;
+  const devido = ov!=null ? +ov||0 : auto;
+  const pend = Math.max(0, r2(devido - pagoMes));
+  const adiantar = sum(fp.itens.filter(d=>d.aPagar && d.pagoEm===m), totalDe);
+  const adiantadoMes = sum([...S.lanc.values()].filter(d=>d.tipo==="pagfatura" && d.fatura===prox && mesDe(d.data)===m), d=>d.valor);
+  // compras marcadas "já paguei" num mês (sem registro de pagamento): também é dinheiro que saiu naquele mês
+  const itensPagos = sum([...S.lanc.values()].filter(d=>d.cartao && d.tipo==="gasto" && d.pagoEm===m && !d.aPagar), totalDe);
+  return {m, prox, fi, devido, auto, manual: ov!=null, pagoMes, pend, adiantar, adiantadoMes, itensPagos, pagos: pags};
+}
 function lancDoMes(m){ return [...S.lanc.entries()].filter(([,d])=>d.mes===m).map(([id,d])=>Object.assign({id},d)); }
 function resumo(m){
   const L = lancDoMes(m);
-  const gastos = L.filter(d=>d.tipo==="gasto"), receitas = L.filter(d=>d.tipo==="receita");
+  const MF = modoFatura(), CM = MF ? cartaoDoMes(m) : null;
+  const gastos = L.filter(d=>d.tipo==="gasto" && !(MF && d.cartao)), receitas = L.filter(d=>d.tipo==="receita");
   const aportes = L.filter(d=>d.tipo==="aporte"), resgates = L.filter(d=>d.tipo==="resgate");
-  const entrou = sum(receitas,d=>d.valor), saiu = sum(gastos,d=>d.valor);
+  const saiuCartao = MF ? sum(L.filter(d=>d.tipo==="pagfatura"), d=>d.valor) + CM.itensPagos : 0;
+  const entrou = sum(receitas,d=>d.valor), saiu = sum(gastos,d=>d.valor) + saiuCartao;
+  const cartPend = MF ? CM.pend + CM.adiantar : 0;
   const guardado = sum(aportes,d=>d.valor) - sum(resgates,d=>d.valor);
   // receitas previstas: cada receita fixa conta pelo recebido, senão pelo esperado
   let previstoRec = 0;
@@ -996,6 +1028,7 @@ function resumo(m){
   for (const c of S.cfg.cats) comprometido += Math.max(orc(c.id), porCat[c.id]||0);
   comprometido += (porCat.__sem||0);
   for (const k in porCat) if (k!=="__sem" && !catById(k)) comprometido += porCat[k];
+  if (MF) comprometido += Math.max(CM.devido, CM.pagoMes) + CM.adiantar + CM.adiantadoMes + CM.itensPagos;
   const metaMensal = sum(S.cfg.metas||[], x=>+x.aporteMensal||0);
   const aporteComp = Math.max(metaMensal, guardado);
   const sobraPrev = receitaPrev - comprometido - aporteComp + sum(L.filter(d=>d.tipo==="ajuste"), d=>+d.valor||0);
@@ -1006,11 +1039,15 @@ function resumo(m){
   const restantes = m===atual ? dim - dia + 1 : (m>atual ? dim : 0);
   const dzPend = Math.max(0, dz - (porCat.dizimo||0));
   const guardarPend = Math.max(0, metaMensal - guardado);
-  const caixaLivre = receitaPrev - saiu - fixosPend - guardarPend - dzPend + ajuste;
+  const caixaLivre = receitaPrev - saiu - fixosPend - cartPend - guardarPend - dzPend + ajuste;
+  // planejamento do início do mês: recebo − fatura − contas − planejados − guardar = sobra para o dia a dia
+  const contasPrev = sum(itens, f=>previsto(f, m));
+  const cartPrev = MF ? Math.max(CM.devido, CM.pagoMes) + CM.adiantar + CM.adiantadoMes + CM.itensPagos : 0;
+  const planSobra = receitaPrev - cartPrev - contasPrev - metaMensal - dz + ajuste;
   const porDia = restantes>0 ? Math.max(0, caixaLivre)/restantes : 0;
   const decorrido = m===atual ? dia/dim : (m<atual ? 1 : 0);
   return {L, gastos, receitas, aportes, entrou, saiu, guardado, receitaPrev, porCat, orc, dz, fixosStatus, fixosPend,
-          comprometido, metaMensal, sobraPrev, livre, restantes, porDia, decorrido, caixaLivre, ajuste, guardarPend, dzPend};
+          comprometido, metaMensal, sobraPrev, livre, restantes, porDia, decorrido, caixaLivre, ajuste, guardarPend, dzPend, CM, cartPend, saiuCartao, contasPrev, cartPrev, planSobra};
 }
 
 function avisos(m, R){
@@ -1123,7 +1160,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 16:20";
+const VERSAO = "12/10 16:45";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1167,11 +1204,11 @@ function viewMes(){
   const pct = v => (v/total*100).toFixed(2)+"%";
   const passado = m < atual, futuro = m > atual;
   const heroLbl = passado ? "Sobrou no mês" : futuro ? "Sobra prevista" : "Livre agora";
-  const heroVal = futuro ? R.sobraPrev : R.livre;
+  const heroVal = futuro ? (modoFatura() ? R.planSobra : R.sobraPrev) : R.livre;
   const sub = passado
     ? `Entrou <b>${fm0(R.entrou)}</b>, saiu <b>${fm0(R.saiu)}</b> e você guardou <b>${fm0(R.guardado)}</b>.`
-    : futuro ? `Com o previsto de receitas, contas e orçamento de ${mesLongo(m)}.`
-    : `Sobra prevista no fim do mês: <b>${fm0(R.sobraPrev)}</b>. Dá pra gastar <b>${fm0(R.porDia)}/dia</b> nos próximos ${R.restantes} dias.`;
+    : futuro ? `Com o previsto de receitas, fatura, contas e planejados de ${mesLongo(m)}.`
+    : `Livre até o fim do mês: <b>${fm0(R.caixaLivre)}</b>. Dá pra gastar <b>${fm0(R.porDia)}/dia</b> nos próximos ${R.restantes} dias.`;
   const big = v => { const neg = v<0; const s = BRL.format(Math.abs(Math.round(v*100)/100)).split(","); return `<div class="big ${neg?"neg":""}"><span class="c">${neg?"−":""}R$</span>${s[0]}<span class="c" style="vertical-align:baseline;margin:0">,${s[1]}</span></div>`; };
 
   const hero = `<section class="hero"><div class="confete" aria-hidden="true"><i style="background:var(--blue)"></i><i style="background:var(--tang)"></i><i style="background:var(--amber)"></i><i style="background:var(--mint)"></i><i style="background:var(--pink)"></i></div>
@@ -1195,14 +1232,7 @@ function viewMes(){
       <span><i style="background:var(--amber)"></i>Guardar ${fm0(segG)}</span>
       <span><i style="background:var(--mint)"></i>Livre ${fm0(segL)}</span>
     </div>
-    ${!passado ? (()=>{ const pend = R.fixosStatus.filter(x=>!x.pago).sort((a,b)=>(+a.f.dia||99)-(+b.f.dia||99));
-      const linhas = [["Vai entrar no mês", R.receitaPrev, ""], ["Já saiu (gastos)", -R.saiu, ""], ["Contas que ainda vêm", -R.fixosPend, pend.length?`${pend.length} ${pend.length>1?"itens":"item"}`:"tudo pago"], ...(R.guardarPend?[["Falta guardar", -R.guardarPend, ""]]:[]), ...(R.dzPend?[["Dízimo", -R.dzPend, ""]]:[]), ...(R.ajuste?[["Ajuste manual", R.ajuste, ""]]:[])];
-      return `<div class="prevhero"><div class="ph-h"><b>Previsão de ${MES[+m.slice(5)-1]}</b><button class="aj-link" data-act="planejar:${m}">planejar</button></div>
-        ${linhas.map(([n,v,o])=>`<div class="ph-l"><span>${n}${o?` <small>${o}</small>`:""}</span><b class="num ${v<0?"neg":""}">${v<0?"−":v>0&&n!=="Vai entrar no mês"?"+":""}${fm0(Math.abs(v))}</b></div>`).join("")}
-        <div class="ph-l tot"><span>Livre até o fim do mês</span><b class="num ${R.caixaLivre<0?"neg":""}">${R.caixaLivre<0?"−":""}${fm0(Math.abs(R.caixaLivre))}</b></div>
-        ${pend.length ? `<div class="ph-pend">${pend.slice(0,8).map(x=>`<button class="ph-chip" data-act="pagarFixo:${x.f.id}" title="Marcar como pago">${esc(x.f.nome)} <b>${fm0(x.prev)}</b></button>`).join("")}${pend.length>8?`<span class="ph-mais">+${pend.length-8}</span>`:""}</div><small class="ph-dica">Toque numa conta para marcar como paga.</small>`
-          : (R.fixosStatus.length ? "" : `<button class="btn-line" data-act="planejar:${m}">Montar a previsão de contas do mês</button>`)}
-      </div>`; })() : ""}
+    ${!passado ? blocoPlano(m, R) : ""}
     <dl class="kpis">
       <div><dt>Entrou</dt><dd>${fm0(R.entrou)}</dd><small>${R.receitaPrev>R.entrou?"de "+fm0(R.receitaPrev)+" previstos":"tudo recebido"}</small></div>
       <div><dt>Saiu</dt><dd>${fm0(R.saiu)}</dd><small>${R.gastos.length} lançamentos</small></div>
@@ -1223,8 +1253,8 @@ function viewMes(){
   </section>`;
 
   const fx = R.fixosStatus;
-  const totPrev = sum(fx, x=>x.prev) + (S.cfg.dizimo?.ativo ? R.dz : 0);
-  const totPago = sum(fx.filter(x=>x.pago), x=>x.lanc.valor) + (R.porCat.dizimo||0);
+  const totPrev = sum(fx, x=>x.prev) + (S.cfg.dizimo?.ativo ? R.dz : 0) + (R.CM ? Math.max(R.CM.devido, R.CM.pagoMes) : 0);
+  const totPago = sum(fx.filter(x=>x.pago), x=>x.lanc.valor) + (R.porCat.dizimo||0) + (R.CM ? R.CM.pagoMes : 0);
   const nPend = fx.filter(x=>!x.pago).length;
   const porGrupo = {}; for (const x of fx){ const g = catGrupo(x.f.cat); (porGrupo[g] ||= []).push(x); }
   const linhaItem = x => { const late = !x.pago && m===atual && +x.f.dia && +x.f.dia < new Date().getDate(); const editing = memo.get("fx")===x.f.id; const editPago = memo.get("fxPago")===x.f.id;
@@ -1237,9 +1267,9 @@ function viewMes(){
   const dzRow = S.cfg.dizimo?.ativo ? (()=>{ const pago = R.porCat.dizimo||0; const ok = pago>0 && pago >= R.dz - 0.01;
     return `<div class="crow prev ${ok?"done":""}" style="--cc:var(--violet)"><button class="tick ${ok?"on":""}" data-act="${ok?"noop":"dizimo"}" aria-label="Marcar dízimo">${ok?ck():""}</button><div class="nm">Dízimo<small>${S.cfg.dizimo.pct}% do que entra</small></div><div class="v">${fm(Math.max(R.dz,pago))}</div></div>`; })() : "";
   const fixPanel = `<section class="panel prevpanel"><div class="panel-h"><h2 style="--hc:var(--tang)">Previsto do mês</h2><button class="act" data-act="planejar:${m}">Planejar ${MES[+m.slice(5)-1]}</button></div>
-    ${(fx.length||dzRow) ? `<div class="prev-sum"><div><b>${fm0(totPago)}</b> pagos de <b>${fm0(totPrev)}</b> previstos</div><span>${nPend?`${nPend} ${nPend>1?"itens":"item"} a pagar`:"tudo pago"}</span></div>
+    ${(fx.length||dzRow||(R.CM&&R.CM.devido)) ? `<div class="prev-sum"><div><b>${fm0(totPago)}</b> pagos de <b>${fm0(totPrev)}</b> previstos</div><span>${nPend?`${nPend} ${nPend>1?"itens":"item"} a pagar`:"tudo pago"}</span></div>
       <div class="prev-bar"><i style="width:${totPrev?Math.min(100,totPago/totPrev*100).toFixed(1):0}%"></i></div>
-      <div class="check">${dzRow}${Object.keys(GRUPOS).filter(g=>porGrupo[g]).map(g=>`<div class="prev-g">${GRUPOS[g]}</div>${porGrupo[g].sort((a,b)=>(a.pago-b.pago)||((+a.f.dia||99)-(+b.f.dia||99))).map(linhaItem).join("")}`).join("")}</div>
+      <div class="check">${R.CM && (R.CM.devido||R.CM.pagoMes) ? `<div class="crow prev ${R.CM.pend<=0.5?"done":""}" style="--cc:var(--violet)"><button class="tick ${R.CM.pend<=0.5?"on":""}" data-act="${R.CM.pend<=0.5 && R.CM.pagoMes?"desfazerCartao:"+m:"pagarCartao:"+m}" aria-label="Fatura paga">${R.CM.pend<=0.5?ck():""}</button><div class="nm">Fatura do cartão<small>vence em ${MES[+m.slice(5)-1]}${R.CM.pagoMes?` · paga ${fm0(R.CM.pagoMes)}`:""}</small></div><button class="v vbtn" data-act="editarCartao:${m}">${fm(Math.max(R.CM.devido,R.CM.pagoMes))}</button></div>` : ""}${dzRow}${Object.keys(GRUPOS).filter(g=>porGrupo[g]).map(g=>`<div class="prev-g">${GRUPOS[g]}</div>${porGrupo[g].sort((a,b)=>(a.pago-b.pago)||((+a.f.dia||99)-(+b.f.dia||99))).map(linhaItem).join("")}`).join("")}</div>
       <p class="note">Toque no ✓ para marcar como pago pelo valor previsto. Toque no valor para pagar ou corrigir com outro valor. Escrever “energia 240” na barra também marca aqui.</p>`
       : `<p class="note">Aqui ficam os gastos que você já sabe que vêm: aluguel, água, energia, mercado, gasolina, assinaturas… Monte uma vez e todo mês é só marcar.</p>`}
     <button class="btn-line" data-act="planejar:${m}">${fx.length?"Planejar o mês / adicionar item":"Montar o previsto do mês"}</button>
@@ -1278,6 +1308,35 @@ function viewMes(){
   const cartPanel = painelCartao(m);
   return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${fixPanel}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${alertas}${recPanel}${painelReceber()}${metas}</div></div>`;
 }
+function blocoPlano(m, R){
+  const MM = MES[+m.slice(5)-1], CM = R.CM, atual = mesDe(hoje());
+  const contas = R.fixosStatus.filter(x=>!x.f.soMes), plan = R.fixosStatus.filter(x=>x.f.soMes);
+  const linha = (nome, v, extra, cls="") => `<div class="ph-l ${cls}"><span>${nome}${extra?` <small>${extra}</small>`:""}</span><b class="num ${v<0?"neg":""}">${v<0?"−":""}${fm0(Math.abs(v))}</b></div>`;
+  const chipItem = x => `<span class="ph-it ${x.pago?"ok":""}"><button class="ph-tk" data-act="${x.pago?"desfazer:"+x.lanc.id:"pagarFixo:"+x.f.id}" aria-label="${x.pago?"Desmarcar":"Marcar como pago"}">${x.pago?ck():""}</button>${memo.get("fx")===x.f.id ? `<span class="inl">${esc(x.f.nome)} <input id="fxVal" inputmode="decimal" value="${x.prev?BRL.format(x.prev):""}"><button data-act="confirmaFixo:${x.f.id}">OK</button></span>` : memo.get("fxPago")===x.f.id && x.pago ? `<span class="inl">${esc(x.f.nome)} <input id="fxPagoVal" inputmode="decimal" value="${BRL.format(x.lanc.valor)}"><button data-act="confirmaPago:${x.lanc.id}">OK</button></span>` : `<button class="ph-nm" data-act="${x.pago?"editarPago:"+x.f.id:"pagarComValor:"+x.f.id}">${esc(x.f.nome)} <b>${fm0(x.pago?x.lanc.valor:x.prev)}</b></button>`}${x.f.soMes&&!x.pago?`<button class="ph-x" data-act="planTirarRap:${x.f.id}" aria-label="Tirar">×</button>`:""}</span>`;
+  const edCart = memo.get("fxCart")===m;
+  const cart = !CM ? "" : `<div class="ph-sec"><div class="ph-l"><span class="ph-tit"><button class="ph-tk ${CM.pend<=0.5 && (CM.pagoMes||CM.devido)?"on":""}" data-act="${CM.pend<=0.5 && CM.pagoMes ? "desfazerCartao:"+m : "pagarCartao:"+m}" aria-label="Fatura paga">${CM.pend<=0.5 && CM.pagoMes ? ck() : ""}</button>Fatura do cartão <small>vence em ${MM}${CM.pagoMes?` · paga ${fm0(CM.pagoMes)}`:""}${CM.manual?" · valor seu":""}</small></span>
+      ${edCart ? `<span class="inl"><input id="cartVal" inputmode="decimal" value="${CM.devido?BRL.format(CM.devido):""}" placeholder="0,00"><button data-act="confirmaCartao:${m}">OK</button></span>` : `<button class="ph-v neg num" data-act="editarCartao:${m}" title="Toque para mudar">−${fm0(Math.max(CM.devido, CM.pagoMes))}</button>`}</div>
+      ${!CM.devido && !CM.pagoMes && !CM.fi.itens.length ? `<small class="ph-dica">Toque no valor e digite quanto vem a fatura, ou mande a fatura para o app calcular.</small>` : ""}
+      ${CM.adiantar ? `<div class="ph-l"><span class="ph-tit"><button class="ph-tk" data-act="adiantarCartao:${CM.prox}" aria-label="Já adiantei"></button>Adiantar fatura de ${MES[+CM.prox.slice(5)-1]} <small>comida e dia a dia deste mês</small></span><b class="num neg">−${fm0(CM.adiantar)}</b></div>` : ""}
+      ${CM.adiantadoMes ? linha(`Adiantado da fatura de ${MES[+CM.prox.slice(5)-1]}`, -CM.adiantadoMes, "pago") : ""}
+      ${CM.itensPagos ? linha("Compras do cartão pagas antes", -CM.itensPagos, "") : ""}</div>`;
+  const totContas = sum(contas, x=>x.pago ? x.lanc.valor : x.prev), totPlan = sum(plan, x=>x.pago ? x.lanc.valor : x.prev);
+  const gastosFora = r2(R.planSobra - R.caixaLivre);
+  return `<div class="prevhero"><div class="ph-h"><b>Plano de ${MM}</b><button class="aj-link" data-act="planejar:${m}">editar contas</button></div>
+    ${linha("Vai entrar", R.receitaPrev, R.receitaPrev>R.entrou?`recebido ${fm0(R.entrou)}`:"tudo recebido")}
+    ${cart}
+    <div class="ph-sec">${linha("Contas do mês", -totContas, contas.length?`${contas.filter(x=>x.pago).length} de ${contas.length} pagas`:"nenhuma ainda")}
+      ${contas.length?`<div class="ph-pend">${contas.sort((a,b)=>(a.pago-b.pago)||((+a.f.dia||99)-(+b.f.dia||99))).map(chipItem).join("")}</div>`:`<button class="aj-link" data-act="planejar:${m}">montar as contas do mês</button>`}</div>
+    <div class="ph-sec">${linha("Planejados para "+MM, -totPlan, plan.length?"":"compras que você pretende fazer")}
+      ${plan.length?`<div class="ph-pend">${plan.map(chipItem).join("")}</div>`:""}
+      <form class="ph-add" id="planRap" data-mes="${m}"><input id="planRapIn" placeholder="tênis 300, presente 80…" autocomplete="off" enterkeyhint="done" aria-label="Planejar um gasto"><button aria-label="Adicionar">＋</button></form></div>
+    ${R.metaMensal ? linha("Guardar", -R.metaMensal, R.guardado?`guardado ${fm0(R.guardado)}`:"") : ""}
+    ${R.dz ? linha("Dízimo", -R.dz, "") : ""}
+    ${R.ajuste ? linha("Ajuste manual", R.ajuste, "") : ""}
+    ${linha("Sobra para o dia a dia", R.planSobra, "", "tot")}
+    ${m<=atual && Math.abs(gastosFora)>=1 ? linha(gastosFora>0?"Gasto no dia a dia até agora":"Diferença a favor", -gastosFora, gastosFora>0?"Pix, débito e diferenças":"") + linha("Livre agora até o fim do mês", R.caixaLivre, "", "tot") : ""}
+  </div>`;
+}
 const ck = () => `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m3 7.5 2.5 2.5L11 4.5"/></svg>`;
 
 function faturaInfo(venc){
@@ -1302,9 +1361,9 @@ function painelCartao(m){
   return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">${/^cart[aã]o$/i.test(cc.nome||"")||!cc.nome ? "Cartão" : "Cartão "+esc(cc.nome)}</h2><button class="act" data-act="cartaoExtrato">Ver compras</button></div>
     <div class="cards2">
       <div class="fat"><div class="eyebrow">A pagar · fatura que vence em ${MES[+m.slice(5)-1]}</div><div class="fat-v">${fm(atual.falta)}</div>${atual.pago?`<p class="note" style="margin:0">fatura de ${fm0(atual.total)} · já pago ${fm0(atual.pago)}</p>`:""}${atual.adiantar?avisoAdiantar(atual.adiantar, m):""}${atual.total?`<button class="linkbtn" data-act="acertarFatura:${m}">Marcar o que já foi pago</button>`:""}
-        <p class="note">${atual.total? `${fm0(contaAgora)} pesam neste mês${jaContou?` · ${fm0(jaContou)} já tinham pesado no mês da compra`:""}.` : "Nenhuma compra registrada nela."}</p></div>
+        <p class="note">${!atual.total ? "Nenhuma compra registrada nela." : modoFatura() ? "É um item do plano do mês: marque como paga lá em cima quando pagar." : `${fm0(contaAgora)} pesam neste mês${jaContou?` · ${fm0(jaContou)} já tinham pesado no mês da compra`:""}.`}</p></div>
       <div class="fat prox"><div class="eyebrow">A pagar · próxima fatura, vence em ${MES[+addMes(m,1).slice(5)-1]}</div><div class="fat-v">${fm(prox.falta)}</div>${prox.pago?`<p class="note" style="margin:0">fatura de ${fm0(prox.total)} · adiantado ${fm0(prox.pago)}</p>`:""}${prox.adiantar?avisoAdiantar(prox.adiantar, addMes(m,1)):""}${prox.total?`<button class="linkbtn" data-act="acertarFatura:${addMes(m,1)}">Marcar o que já foi pago / adiantar</button>`:""}
-        <p class="note">${prox.total ? `<b>${fm0(desteMesNaProx)}</b> são gastos deste mês (comida e dia a dia), já descontados do seu “livre”. ${fm0(fica)} ficam para o mês que vem.` : "Mande a fatura aberta para ver o que já é deste mês."}</p></div>
+        <p class="note">${!prox.total ? "Mande a fatura aberta para ir acompanhando." : modoFatura() ? `Entra no plano de ${MES[+addMes(m,1).slice(5)-1]} como um item só.` : `<b>${fm0(desteMesNaProx)}</b> são gastos deste mês (comida e dia a dia), já descontados do seu “livre”. ${fm0(fica)} ficam para o mês que vem.`}</p></div>
     </div>
     <div class="btns"><button class="btn" data-act="abrirImport">Mandar fatura</button>${atual.itens.length?`<button class="btn" data-act="analisarFatura:${m}">Analisar fatura de ${MES[+m.slice(5)-1]}</button>`:""}${prox.itens.length?`<button class="btn" data-act="analisarFatura:${addMes(m,1)}">Analisar fatura de ${MES[+addMes(m,1).slice(5)-1]}</button>`:""}</div></section>`;
 }
@@ -1589,6 +1648,7 @@ function viewAjustes(){
         <div class="frow" style="grid-template-columns:1fr 80px"><span>Fatura fecha no dia</span><input class="n" data-cfg="cartao.fechamento" data-int value="${C.cartao?.fechamento||""}" inputmode="numeric"></div>
         <div class="frow" style="grid-template-columns:1fr 80px"><span>Vence no dia</span><input class="n" data-cfg="cartao.vencimento" data-int value="${C.cartao?.vencimento||""}" inputmode="numeric"></div>
       </div>
+      <div class="toggle" style="margin-top:10px"><label for="fatItem">Fatura como um item só<br><span class="note">Compras do cartão não entram no orçamento do mês. Entra o pagamento da fatura, no mês em que vence. Desligado: cada compra conta no orçamento (comida no mês da compra, o resto no mês da fatura).</span></label><input type="checkbox" id="fatItem" data-cfg="faturaItem" ${C.faturaItem!==false?"checked":""}></div>
       <p class="note" style="margin-top:12px">Contam no <b>mês da compra</b> (toque para mudar para o mês da fatura):</p>
       <div class="sugs">${C.cats.filter(c=>c.id!=="dizimo"&&c.id!=="outros"||c.id==="outros").map(c=>`<button class="chip" data-act="togComp:${c.id}" aria-pressed="${contaNaCompra(c.id)}">${esc(c.nome)}</button>`).join("")}</div>
       <p class="note">As que não estão marcadas, e todas as parcelas, contam no mês em que a fatura vence.</p>
@@ -2135,6 +2195,20 @@ async function acao(a, el){
   const m = S.mes, R = () => resumo(m);
   switch(cmd){
     case "noop": return;
+    case "editarCartao": memo.set("fxCart", arg); render(); setTimeout(()=>{ const i = $("#cartVal"); i?.focus(); i?.select(); },0); return;
+    case "confirmaCartao": { const txt = ($("#cartVal")?.value||"").trim(); memo.delete("fxCart"); (S.cfg.planos ||= {}); (S.cfg.planos[arg] ||= {});
+      if (!txt) delete S.cfg.planos[arg].__cartao; else S.cfg.planos[arg].__cartao = parseValor(txt)||0; salvarCfg(true); render(); return; }
+    case "pagarCartao": { const CM = cartaoDoMes(arg); const v = CM.pend; if (!(v>0)){ memo.set("fxCart", arg); render(); setTimeout(()=>$("#cartVal")?.focus(),0); toast("Digite quanto veio a fatura."); return; }
+      const id = uid(); await gravarLanc(id, {tipo:"pagfatura", valor:v, desc:"Fatura do cartão", fatura:arg, cat:null, data: arg===mesDe(hoje()) ? hoje() : dataNoMes(arg, (S.cfg.cartao||{}).vencimento||10), origem:"checklist", criado:Date.now()});
+      toast(`Fatura de ${MES[+arg.slice(5)-1]}: ${fm(v)} paga`, async()=>{ await apagarLanc(id); toast("Desfeito"); }); return; }
+    case "desfazerCartao": { const ids = [...S.lanc.entries()].filter(([,d])=>d.tipo==="pagfatura" && d.fatura===arg && mesDe(d.data)===arg).map(([id,d])=>[id,d]);
+      for (const [id] of ids) await apagarLanc(id); toast("Pagamento da fatura desmarcado", async()=>{ for (const [id,d] of ids) await gravarLanc(id, d); }); return; }
+    case "adiantarCartao": case "jaAdiantei": { const venc = arg; const its = [...S.lanc.entries()].filter(([,d])=>d.aPagar && d.fatura===venc); if (!its.length) return;
+      const v = r2(sum(its, ([,d])=>totalDe(d))); const id = uid();
+      for (const [iid,d] of its){ const nd = Object.assign({}, d); delete nd.aPagar; delete nd.pagoEm; await gravarLanc(iid, nd); }
+      await gravarLanc(id, {tipo:"pagfatura", valor:v, desc:"Adiantamento da fatura", fatura:venc, cat:null, data:hoje(), origem:"adiantamento", criado:Date.now()});
+      toast(`Adiantado ${fm(v)} da fatura de ${MES[+venc.slice(5)-1]}`, async()=>{ await apagarLanc(id); for (const [iid,d] of its) await gravarLanc(iid, d); toast("Desfeito"); }); return; }
+    case "planTirarRap": { S.cfg.fixos = S.cfg.fixos.filter(x=>x.id!==arg); salvarCfg(true); render(); return; }
     case "abrirAjuste": memo.set("ajSaldo", arg); render(); setTimeout(()=>$("#ajVal")?.focus(), 30); return;
     case "cancelaAjuste": memo.delete("ajSaldo"); render(); return;
     case "confirmaAjuste": { const m = arg; const txt = ($("#ajVal")?.value||"").trim(); memo.delete("ajSaldo"); if (!txt){ render(); return; }
@@ -2252,9 +2326,6 @@ async function acao(a, el){
       folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true);
       toast(Math.abs(soma-alvo)<0.5 ? `Marquei ${fm(soma)} como já pago. Bateu com o banco.` : `Marquei ${fm(soma)} das compras mais antigas. Faltam ${fm(alvo-soma)} para bater: ajuste à mão.`, null, 6000); return; }
     case "acertarFatura": folhaPagas(arg); return;
-    case "jaAdiantei": { const ids = [...S.lanc.entries()].filter(([,d])=>d.aPagar && d.fatura===arg).map(([id])=>id); const antes = ids.map(id=>[id, S.lanc.get(id)]);
-      for (const id of ids){ const nd = Object.assign({}, S.lanc.get(id)); delete nd.aPagar; await gravarLanc(id, nd); }
-      toast(`Anotado: ${ids.length} ${ids.length>1?"compras adiantadas":"compra adiantada"}.`, async()=>{ for (const [id,d] of antes) await gravarLanc(id, d); }); return; }
     case "autoPagas": { const alvo = parseValor($("#alvoPago")?.value||"")||0; const rows = memo.get("pagas")||[]; let soma = 0;
       rows.forEach(r=>r.on=false); for (const r of rows.slice().sort((a,b)=>a.data<b.data?-1:1)){ if (soma + r.total <= alvo + 0.01){ r.on = true; soma += r.total; } }
       folhaPagas(memo.get("pagasVenc"), true); return; }
@@ -2380,7 +2451,16 @@ document.addEventListener("change", e=>{
     o[k] = v; salvarCfg(); return;
   }
 });
+function planejarRapido(texto, m){
+  const partes = String(texto||"").split(/[,;\n]+|\s+e\s+(?=[^,;]*\d)/i).map(x=>x.trim()).filter(Boolean); const novos = [];
+  for (const p of partes){ const mm = p.match(/^(.*?)(?:r\$\s*)?(\d[\d.]*(?:,\d{1,2})?)\s*(?:reais)?(.*)$/i); if (!mm) continue;
+    const nome = (mm[1]+" "+mm[3]).replace(/\s+/g," ").replace(/^(comprar|um|uma|pagar)\s+/i,"").trim(); const v = parseValor(mm[2]); if (!nome || !(v>0)) continue;
+    const id = "f"+uid(); S.cfg.fixos.push({id, nome: nome.charAt(0).toUpperCase()+nome.slice(1), valor:v, dia:0, cat: categorizar(nome)||"outros", varia:true, soMes:m});
+    ((S.cfg.planos ||= {})[m] ||= {})[id] = v; novos.push(nome+" "+fm0(v)); }
+  if (novos.length){ salvarCfg(true); render(); toast(`Planejado: ${novos.join(", ")}`); } else toast("Escreva o nome e o valor, ex.: tênis 300");
+}
 document.addEventListener("submit", e=>{
+  if (e.target.id==="planRap"){ e.preventDefault(); planejarRapido($("#planRapIn")?.value, e.target.dataset.mes); return; }
   e.preventDefault();
   if (e.target.id==="askF"){ perguntar($("#askIn").value); return; }
   if (e.target.id==="askFat"){ const q = $("#askFatIn").value.trim(); const A = memo.get("analise"); if (!q || !A || !S.ai) return; const out = $("#askFatOut"); out.textContent = "Pensando…";
