@@ -629,21 +629,79 @@ function parseLinha(raw){
     valor = parseValor(vm[1]); porParcela = false; t = t.replace(vm[0]," ");
   }
   if (!(valor>0)) return null;
+  t = t.replace(/^\s*(e|mais|tamb[eé]m|depois|a[ií])\s+/i," ");
   const l = norm(t);
-  let tipo = "gasto";
-  if (/^\s*\+/.test(line) || /\b(recebi|ganhei|entrou|caiu|salario|pagamento recebido|renda|freela|pix recebido)\b/.test(l)) tipo = "receita";
-  if (/\b(guardei|poupei|aportei|aporte|guardar|reservei|investi)\b/.test(l)) tipo = "aporte";
-  if (/\b(resgatei|tirei da|saquei da|resgate)\b/.test(l)) tipo = "resgate";
-  let desc = t.replace(/^\s*[+-]/,"").replace(/\b(recebi|ganhei|entrou|caiu|guardei|poupei|aportei|reservei|investi|resgatei|tirei|saquei|gastei|paguei|comprei|foi|reais|real|conto|contos)\b/ig," ")
+  let tipo = "gasto", explicito = false;
+  const fonteRec = (S.cfg.receitas||[]).find(r => norm(r.nome).split(/\s+/).some(w => w.length>2 && !["salario","renda"].includes(w) && new RegExp("\\b"+w+"\\b").test(l)));
+  if (/\b(gastei|paguei|comprei|torrei|saiu|perdi)\b/.test(l)) explicito = true;
+  if (/^\s*\+/.test(line) || /\b(recebi|recebido|ganhei|ganho|entrou|entraram|caiu|cairam|salario|pagamento recebido|renda|freela|extra|bonus|pix recebido|reembolso|me pagaram|me pagou)\b/.test(l)) { tipo = "receita"; explicito = true; }
+  if (/\b(guardei|poupei|aportei|aporte|guardar|reservei|investi|depositei na|mandei pra (casa|poupanca))\b/.test(l)) { tipo = "aporte"; explicito = true; }
+  const mencionaMeta = /\b(poupanca|caixinha|reserva|casa|investimento)\b/.test(l) || (S.cfg.metas||[]).some(m => norm(m.nome).split(/\s+/).some(w => w.length>3 && l.includes(w)));
+  if (/\b(resgatei|resgate)\b/.test(l) || (/\b(tirei|saquei|retirei|peguei)\b/.test(l) && mencionaMeta)) { tipo = "resgate"; explicito = true; }
+  else if (/\b(tirei|saquei|retirei)\b/.test(l) && tipo!=="receita" && tipo!=="aporte") { tipo = "gasto"; explicito = true; }
+  if (fonteRec && tipo==="gasto" && !/\b(gastei|paguei|comprei|tirei|saquei|retirei)\b/.test(l)) { tipo = "receita"; explicito = true; }
+  let desc = t.replace(/^\s*[+-]/,"").replace(/\b(recebi|recebido|ganhei|entrou|entraram|caiu|cairam|guardei|poupei|aportei|reservei|investi|depositei|resgatei|tirei|saquei|retirei|peguei|gastei|paguei|comprei|torrei|foi|reais|real|conto|contos|como|sendo|ai|a mais|me pagaram|me pagou)\b/ig," ")
               .replace(/^\s*(de|do|da|no|na|em|com|pra|para|pro)\s+/i,"").replace(/\s+(de|do|da|no|na|em|com|pra|para|pro)\s*$/i,"").replace(/\s+/g," ").trim();
   let meta = null, cat = null;
   if (tipo==="aporte"||tipo==="resgate"){ const m = acharMeta(desc); meta = m?.id || null; desc = desc || (m ? m.nome : "Poupança"); if (m){ const extra = desc.split(/\s+/).filter(w=>w && !norm(m.nome).includes(norm(w))).join(" "); desc = m.nome + (extra ? " · " + extra : ""); } }
-  else if (tipo==="receita"){ cat = "__rec"; desc = desc ? titulo(desc) : "Receita"; }
-  else { cat = explicitCat || categorizar(desc); desc = desc ? desc.charAt(0).toUpperCase()+desc.slice(1) : (cat ? catNome(cat) : "Gasto"); }
+  let rec = null;
+  if (tipo==="receita"){ cat = "__rec";
+    if (fonteRec){ rec = fonteRec.id; desc = fonteRec.nome; }
+    else desc = desc ? titulo(desc.replace(/^(o|a|um|uma)\s+/i,"")) : "Receita"; }
+  else { cat = explicitCat || categorizar(desc); if (!desc && /\b(tirei|saquei|retirei)\b/.test(l)) desc = "Saque"; desc = desc ? desc.charAt(0).toUpperCase()+desc.slice(1) : (cat ? catNome(cat) : "Gasto"); }
   if (porParcela) valor = valor * parcelas;
-  return finalizar({tipo, valor:r2(valor), desc, cat, meta, data, parcelas, origem:"rapido"});
+  return finalizar({tipo, valor:r2(valor), desc, cat, meta, rec, data, parcelas, explicito, origem:"rapido"});
 }
 function finalizar(p){ p.parcelas = p.parcelas||1; return p; }
+const NUM = "(?:\\d{1,3}(?:\\.\\d{3})+(?:,\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?)";
+function somarContas(t){
+  const re = new RegExp("("+NUM+")\\s*([+\\-])\\s*("+NUM+")(?![\\d/])");
+  let guard = 0;
+  while (re.test(t) && guard++ < 20) t = t.replace(re, (m,a,op,b) => { const v = op==="+" ? parseValor(a)+parseValor(b) : parseValor(a)-parseValor(b); return String(r2(v)).replace(".",","); });
+  return t;
+}
+const temNumero = s => /\d/.test(s.replace(/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/g,"").replace(/\b\d{1,2}\s*[x×]/gi,""));
+function dividirFrase(line){
+  let t = somarContas(line.trim());
+  // "recebi 1200, sendo 700 do genoma e 500 do sesi"
+  const sm = t.match(/^(.*?)(?:,\s*)?\b(?:sendo|dos quais|das quais|divididos? em|que (?:foi|foram)|assim:|:)\s+(.+)$/i);
+  let blocos = [t];
+  if (sm && temNumero(sm[1]) && temNumero(sm[2])){
+    const verbo = (norm(sm[1]).match(/\b(recebi|ganhei|entrou|caiu|guardei|poupei|gastei|paguei|tirei|saquei)\b/)||[])[1] || "";
+    const brutos = sm[2].split(/\s*[,;]\s*|\s+e\s+|\s+mais\s+|(?=\s(?:r\$\s*)?\d)/i).map(x=>x.trim()).filter(Boolean);
+    const partes = []; let pend = "";
+    for (const x of brutos){ if (temNumero(x)){ partes.push((pend+" "+x).trim()); pend = ""; } else if (pend || !partes.length || /^(gastei|paguei|tirei|saquei|guardei|ganhei|recebi|comprei)\b/i.test(norm(x))) pend = (pend+" "+x).trim(); else partes[partes.length-1] += " " + x; }
+    if (partes.length>=2) blocos = partes.map(x => (verbo && !/\b(recebi|ganhei|guardei|gastei|paguei|tirei|saquei)\b/i.test(norm(x)) ? verbo+" " : "") + x);
+    else blocos = [sm[1]];
+  }
+  // separa por vírgula, ponto e vírgula, " e ", "mais", "depois", "também"
+  const out = [];
+  for (const b of blocos){
+    const pedacos = b.split(/\s*[;]\s*|\s*,\s*(?=\D*\d)|\s+e\s+(?=[^\d]*\d)|\s+mais\s+(?=[^\d]*\d)|\s+depois\s+|\s+tamb[eé]m\s+|\.\s+/i).map(x=>x.trim()).filter(Boolean);
+    for (const pz of pedacos){ if (temNumero(pz) || !out.length) out.push(pz); else out[out.length-1] += " " + pz; }
+  }
+  return out.filter(temNumero);
+}
+function parseTexto(v){
+  const linhas = v.split("\n").map(x=>x.trim()).filter(Boolean);
+  const itens = [], falhas = [];
+  for (const ln of linhas){
+    const notif = parseNotificacao(ln);
+    if (notif){ itens.push(finalizar(notif)); continue; }
+    const partes = dividirFrase(ln);
+    if (!partes.length){ falhas.push(ln); continue; }
+    let anterior = null;
+    for (const pt of partes){
+      let p = parseLinha(pt);
+      if (p && !p.explicito && anterior && anterior.tipo!=="gasto"){
+        const verbo = {receita:"recebi", aporte:"guardei", resgate:"resgatei"}[anterior.tipo];
+        const q = parseLinha(verbo+" "+pt); if (q) p = q;
+      }
+      if (p){ itens.push(p); anterior = p; } else falhas.push(pt);
+    }
+  }
+  return {itens, falhas, linhas};
+}
 
 /* ---------- gravação ---------- */
 const memo = new Map();
@@ -684,8 +742,10 @@ async function lancarParsed(p, opts={}){
     if (grupo){ doc.grupo = grupo; doc.parc = (i+1)+"/"+n; }
     if (p.fixo) doc.fixo = p.fixo;
     if (p.rec) doc.rec = p.rec;
+    const recLivre = p.rec && ![...S.lanc.values()].some(x=>x.rec===p.rec && x.mes===mesDe(doc.data));
     doc.h = hashL(doc);
-    const id = opts.id && n===1 ? opts.id : "l"+uid()+i;
+    const id = opts.id && n===1 ? opts.id : (recLivre && n===1 ? `rc-${p.rec}-${mesDe(doc.data)}` : "l"+uid()+i);
+    if (p.rec && !recLivre && !opts.id) delete doc.rec;
     ids.push(id);
     await gravarLanc(id, doc);
   }
@@ -938,7 +998,7 @@ function viewMes(){
       <div class="goal-bar" style="height:12px;margin:12px 0 6px"><span class="f" style="width:${p.toFixed(1)}%"></span></div>
       <div class="goal-meta"><span>${p.toFixed(1).replace(".",",")}% de ${fm0(mt.alvo)}</span><span>faltam <b>${fm0(Math.max(0,mt.alvo-s))}</b></span></div></section>`; }).join("");
 
-  if (vazio) return `<div class="grid"><div class="panel empty"><b>Carregando sua caderneta…</b>Se demorar, abra este link no Claude conectado à sua conta.</div></div>`;
+  if (vazio) return `<div class="grid"><div class="panel empty"><b>Carregando sua caderneta…</b>${S.modo==="firebase" ? "Conectando ao seu Firebase. Se passar de alguns segundos, recarregue a página." : "Se demorar, abra este link no Claude conectado à sua conta."}</div></div>`;
   return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${envPanel}${parcPanel}</div><div class="col">${alertas}${recPanel}${fixPanel}${metas}</div></div>`;
 }
 const ck = () => `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m3 7.5 2.5 2.5L11 4.5"/></svg>`;
@@ -1159,7 +1219,7 @@ function folhaLote(rows, titulo, nota){
       <td style="width:28px"><input type="checkbox" data-lote="${i}.on" ${r._on?"checked":""} aria-label="Incluir"></td>
       <td style="width:118px"><input type="date" data-lote="${i}.data" value="${r.data}"></td>
       <td><input type="text" data-lote="${i}.desc" value="${esc(r.desc)}"></td>
-      <td style="width:150px"><select data-lote="${i}.tipo">${[["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["interno","Ignorar"]].map(([v,n])=>`<option value="${v}" ${r.tipo===v?"selected":""}>${n}</option>`).join("")}</select></td>
+      <td style="width:150px"><select data-lote="${i}.tipo">${[["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["resgate","Resgatei"],["interno","Ignorar"]].map(([v,n])=>`<option value="${v}" ${r.tipo===v?"selected":""}>${n}</option>`).join("")}</select></td>
       <td style="width:150px"><select data-lote="${i}.cat">${catOpt(r.cat)}</select></td>
       <td style="width:100px"><input type="text" class="n" inputmode="decimal" data-lote="${i}.valor" value="${BRL.format(r.valor)}"></td>
     </tr>`).join("")}</tbody></table></div>
@@ -1171,7 +1231,7 @@ function folhaColar(){
   abrirFolha(`<h3>Importar</h3><p class="lead">Escolha o CSV do Nubank (conta ou fatura) ou cole aqui notificações, linhas de extrato, o que tiver.</p>
     <div class="btns" style="margin:0 0 12px"><button class="btn solid" data-act="escolherCsv">Escolher arquivo CSV</button></div>
     <textarea class="paste" id="pasteIn" placeholder="Compra de R$ 52,90 APROVADA em POSTO IPIRANGA…&#10;Você recebeu uma transferência de R$ 300,00 de Fulano&#10;mercado 230 ontem"></textarea>
-    <div class="sheet-foot"><button type="button" class="btn" data-close>Cancelar</button>${S.sample?`<button class="btn" data-act="colarIA">Ler com IA</button>`:""}<button class="btn green" data-act="colarLer">Ler</button></div>`);
+    <div class="sheet-foot"><button type="button" class="btn" data-close>Cancelar</button>${S.ai?`<button class="btn" data-act="colarIA">Ler com IA</button>`:""}<button class="btn green" data-act="colarLer">Ler</button></div>`);
 }
 
 /* ---------- importação ---------- */
@@ -1218,24 +1278,52 @@ function promptExtrair(extra){
   return `Você extrai lançamentos financeiros pessoais de um brasileiro a partir de ${extra}.
 Hoje é ${hoje()}. Se o ano não aparecer, use o ano mais provável perto de hoje.
 Categorias válidas (id: nome): ${S.cfg.cats.map(c=>c.id+": "+c.nome).join("; ")}.
-Regras: "valor" sempre positivo em reais (número, ponto decimal). "tipo": "gasto" para compras, pagamentos e pix enviados; "receita" para salário, pix ou transferência recebida, estorno; "interno" para pagamento de fatura, transferência entre contas da mesma pessoa, aplicação ou resgate de caixinha/RDB. "desc": nome curto e legível do estabelecimento ou pessoa, sem códigos nem asteriscos. "cat": o id mais provável para gastos, ou null. "data": AAAA-MM-DD.
-Ignore saldos, limites, totais e linhas que não são transações.
+Regras: "valor" sempre positivo em reais (número, ponto decimal). "tipo": "gasto" para compras, pagamentos, saques e pix enviados; "receita" para salário, extra, pix ou transferência recebida, estorno; "aporte" quando a pessoa diz que guardou/poupou dinheiro numa meta; "resgate" quando tirou dinheiro da poupança/meta; "interno" para pagamento de fatura, transferência entre contas da mesma pessoa, aplicação ou resgate de caixinha/RDB. "desc": nome curto e legível do estabelecimento ou pessoa, sem códigos nem asteriscos. "cat": o id mais provável para gastos, ou null. "data": AAAA-MM-DD.
+Se a pessoa disser um total e depois detalhar ("recebi 1200, sendo 700 de X e 500 de Y"), lance só as partes detalhadas, não o total. Faça as contas que ela escrever (ex.: "1200+12" = 1212).
+Fontes de receita cadastradas (id: nome): ${(S.cfg.receitas||[]).map(r=>r.id+": "+r.nome).join("; ")||"nenhuma"}. Para receitas que vêm de uma delas, inclua "fonte" com o id.
+Ignore saldos, limites e linhas que não são transações.
 Responda só com um array JSON, por exemplo: [{"data":"2026-10-05","desc":"Posto Ipiranga","valor":52.9,"tipo":"gasto","cat":"transporte"}]`;
 }
+/* camada de IA: Claude (no app do Claude) ou Gemini via Firebase (no site) */
+function jsonSolto(t){ t = String(t||"").trim(); try{ return JSON.parse(t); }catch(e){} const f = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (f){ try{ return JSON.parse(f[1]); }catch(e){} } const a = t.search(/[\[{]/), b = Math.max(t.lastIndexOf("]"), t.lastIndexOf("}")); if (a>=0 && b>a){ try{ return JSON.parse(t.slice(a,b+1)); }catch(e){} } const err = new Error("json"); err.code = "invalid_json"; throw err; }
+function iaClaude(sample){ return {
+  json: (prompt, imgs) => sample.json(prompt, imgs ? {images: imgs} : {}),
+  texto: (prompt, onText) => sample(prompt, {onText: ({text}) => onText(text)}).then(r => r.text),
+  erro: e => ({not_granted:"Você não liberou o uso do Claude para este app.", rate_limited:"Muitas leituras seguidas. Espere um pouco.", images_unavailable:"Este aparelho não consegue enviar imagens. Cole o texto.", invalid_json:"A leitura veio confusa. Tente de novo."})[e?.code]
+};}
+function iaGemini(){
+  const MODELOS = ["gemini-flash-latest","gemini-2.5-flash","gemini-2.5-flash-lite"]; let idx = 0;
+  async function modelo(json){
+    FB.aiM ||= await import(`https://www.gstatic.com/firebasejs/${FB_V}/firebase-ai.js`);
+    FB.ai ||= FB.aiM.getAI(FB.app, {backend: new FB.aiM.GoogleAIBackend()});
+    return FB.aiM.getGenerativeModel(FB.ai, {model: MODELOS[idx], generationConfig: json ? {responseMimeType:"application/json"} : {}});
+  }
+  async function tentar(json, fn){
+    for (;;){ try{ return await fn(await modelo(json)); }
+      catch(e){ const m = String(e?.message||e); if (/not found|404|not supported|unsupported model|is not available|deprecated/i.test(m) && idx < MODELOS.length-1){ idx++; continue; } throw e; } }
+  }
+  const partes = imgs => Promise.all([...imgs].map(f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res({inlineData:{data:String(r.result).split(",")[1], mimeType:f.type||"image/jpeg"}}); r.onerror = rej; r.readAsDataURL(f); })));
+  return {
+    json: (prompt, imgs) => tentar(true, async m => { const conteudo = imgs ? [prompt, ...(await partes(imgs))] : prompt; const r = await m.generateContent(conteudo); return jsonSolto(r.response.text()); }),
+    texto: (prompt, onText) => tentar(false, async m => { const r = await m.generateContentStream(prompt); let t = ""; for await (const c of r.stream){ t += c.text(); onText(t); } return t; }),
+    erro: e => { const m = String(e?.message||e); if (e?.code==="invalid_json") return "A leitura veio confusa. Tente de novo."; if (/api.*(not been used|disabled|not enabled)|firebasevertexai|firebaseml|AI Logic|SERVICE_DISABLED|PERMISSION_DENIED|403/i.test(m)) return "Falta ativar a IA no Firebase: console → AI Logic → Começar → Gemini Developer API."; if (/quota|429|RESOURCE_EXHAUSTED|rate/i.test(m)) return "Limite gratuito da IA atingido por agora. Tente mais tarde."; return null; }
+  };
+}
 async function iaExtrair(texto, imagens){
-  if (!S.sample){ toast("A leitura com IA só funciona com o app aberto no Claude."); return; }
+  if (!S.ai){ toast(S.modo==="firebase" ? "Entre com sua conta Google para usar a IA." : "A leitura com IA só funciona com o app aberto no Claude."); return; }
   toast("Lendo com IA… pode levar alguns segundos.", null, 60000);
   try{
     const input = imagens ? promptExtrair("print(s) ou foto(s) de fatura, extrato ou notificações (imagens anexas)") : promptExtrair("o texto abaixo") + "\n\nTEXTO:\n" + texto.slice(0, 60000);
-    const arr = await S.sample.json(input, imagens ? {images: imagens} : {});
+    let arr = await S.ai.json(input, imagens);
+    if (arr && !Array.isArray(arr)) arr = arr.lancamentos || arr.itens || arr.transacoes || Object.values(arr).find(Array.isArray) || [];
     if (!Array.isArray(arr) || !arr.length){ toast("Não encontrei lançamentos aí."); return; }
-    const rows = arr.map(x=>({data: dataBR(x.data)||hoje(), desc: titulo(x.desc||"Lançamento").slice(0,60), valor: Math.abs(+x.valor||0), tipo: ["gasto","receita","aporte","interno"].includes(x.tipo)?x.tipo:"gasto", cat: catById(x.cat)?x.cat:null}))
+    const rows = arr.map(x=>({data: dataBR(x.data)||hoje(), desc: titulo(x.desc||"Lançamento").slice(0,60), valor: Math.abs(+x.valor||0), tipo: ["gasto","receita","aporte","resgate","interno"].includes(x.tipo)?x.tipo:"gasto", cat: catById(x.cat)?x.cat:null, rec: (S.cfg.receitas||[]).find(r=>r.id===x.fonte)?x.fonte:null}))
       .filter(r=>r.valor>0).map(r=>{ if (r.tipo==="gasto"){ const local = categorizar(r.desc); if (local && S.cfg.regras[keyOf(r.desc)]) r.cat = local; else r.cat = r.cat || local; } if (r.tipo==="receita") r.cat="__rec"; return r; });
     hideToast();
     folhaLote(rows, `${rows.length} lançamentos encontrados`, "A IA leu e categorizou. Confira antes de lançar.");
   }catch(e){
     hideToast();
-    const msg = {not_granted:"Você não liberou o uso do Claude para este app.", rate_limited:"Muitas leituras seguidas. Espere um pouco.", images_unavailable:"Este aparelho não consegue enviar imagens. Cole o texto.", invalid_json:"A leitura veio confusa. Tente de novo ou cole o texto."}[e?.code] || "Não consegui ler agora. Tente de novo.";
+    const msg = S.ai.erro(e) || "Não consegui ler agora. Tente de novo.";
     toast(msg);
   }
 }
@@ -1259,13 +1347,12 @@ ${lanc || "nenhum ainda"}`.slice(0, 200000);
 }
 async function perguntar(q){
   if (!q.trim()) return;
-  if (!S.sample){ S.aiAnswer = "As perguntas só funcionam com o app aberto no Claude."; render(); return; }
+  if (!S.ai){ S.aiAnswer = S.modo==="firebase" ? "Entre com sua conta Google para perguntar." : "As perguntas só funcionam com o app aberto no Claude."; render(); return; }
   S.aiBusy = true; S.aiAnswer = ""; render();
   try{
-    await S.sample(`${contextoIA()}\n\nPERGUNTA: ${q}\n\nResponda em português do Brasil, direto e curto (no máximo 6 linhas), com valores em R$. Sem markdown, sem tabelas. Se os dados da planilha forem aproximados para essa resposta, diga em uma frase.`, {
-      onText: ({text}) => { S.aiAnswer = text; const a = $("#answer"); if (a){ a.textContent = text; a.classList.remove("wait"); } }
-    });
-  }catch(e){ S.aiAnswer = e?.text || ({not_granted:"Você não liberou o uso do Claude para este app.", rate_limited:"Muitas perguntas seguidas. Tente daqui a pouco."}[e?.code] || "Não consegui responder agora."); }
+    await S.ai.texto(`${contextoIA()}\n\nPERGUNTA: ${q}\n\nResponda em português do Brasil, direto e curto (no máximo 6 linhas), com valores em R$. Sem markdown, sem tabelas. Se os dados da planilha forem aproximados para essa resposta, diga em uma frase.`,
+      text => { S.aiAnswer = text; const a = $("#answer"); if (a){ a.textContent = text; a.classList.remove("wait"); } });
+  }catch(e){ S.aiAnswer = e?.text || S.ai.erro(e) || "Não consegui responder agora."; }
   S.aiBusy = false; render();
 }
 
@@ -1288,13 +1375,21 @@ function atualizarPreview(){
   const q = $("#q"), v = q.value;
   q.style.height = "48px"; if (v.includes("\n")) q.style.height = Math.min(140, q.scrollHeight)+"px";
   const pv = $("#pv");
-  const linhas = v.split("\n").filter(x=>x.trim());
-  if (!linhas.length){ atualP=null; $("#goBtn").disabled = true; pv.innerHTML = `<span class="hint">Escreva do jeito que falaria. Cole a notificação do Nubank. Ou mande o print da fatura.</span>`; return; }
-  if (linhas.length>1){ const ps = linhas.map(parseLinha); const ok = ps.filter(Boolean).length; atualP = {lote:ps, linhas};
-    $("#goBtn").disabled = false; pv.innerHTML = `<span class="pill g">${ok} de ${linhas.length} linhas entendidas</span><span class="hint">Enter para revisar e lançar todas.</span>`; return; }
-  const p = parseLinha(linhas[0]); atualP = p;
-  $("#goBtn").disabled = !p;
-  if (!p){ pv.innerHTML = `<span class="pill o">Faltou o valor</span><span class="hint">Ex.: “mercado 230”.</span>${S.sample?` <button class="chip" data-act="iaLinha">Ler com IA</button>`:""}`; return; }
+  if (!v.trim()){ atualP=null; $("#goBtn").disabled = true; pv.innerHTML = `<span class="hint">Escreva do jeito que falaria. Pode ser uma frase com várias coisas. Cole a notificação do Nubank. Ou mande o print da fatura.</span>`; return; }
+  const P = parseTexto(v);
+  const iaBtn = S.ai ? ` <button class="chip" data-act="iaLinha">Ler com IA</button>` : "";
+  if (P.itens.length>1 || P.linhas.length>1){
+    atualP = {lote:P.itens, falhas:P.falhas, texto:v, multi:P.linhas.length>1};
+    $("#goBtn").disabled = !P.itens.length && !S.ai;
+    const cor = {gasto:"",receita:"g",aporte:"y",resgate:"y"};
+    pv.innerHTML = P.itens.slice(0,8).map(p=>`<span class="pill ${cor[p.tipo]}">${p.tipo==="receita"?"+":p.tipo==="gasto"?"−":p.tipo==="aporte"?"→":"←"} ${fm(p.valor)} · ${esc(p.desc)}</span>`).join("")
+      + (P.itens.length>8?`<span class="hint">+${P.itens.length-8}</span>`:"")
+      + (P.falhas.length?`<span class="pill o">${P.falhas.length} trecho(s) sem valor</span>`:"") + iaBtn;
+    return;
+  }
+  const p = P.itens[0] || null; atualP = p;
+  $("#goBtn").disabled = !p && !S.ai;
+  if (!p){ pv.innerHTML = `<span class="pill o">Faltou o valor</span><span class="hint">Ex.: “mercado 230”.</span>${iaBtn}`; return; }
   const tipoL = {gasto:["Gasto",""],receita:["Receita","g"],aporte:["Guardar","y"],resgate:["Resgate","y"]}[p.tipo];
   const catSel = p.tipo==="gasto" ? `<span class="pill ${p.cat?"":"o"}"><span class="dot" style="--cc:${corCat(p.cat)}"></span><select id="pvCat" aria-label="Categoria">${p.cat?"":`<option value="">Sem categoria</option>`}${S.cfg.cats.map(c=>`<option value="${c.id}" ${p.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select></span>` : "";
   const metaSel = (p.tipo==="aporte"||p.tipo==="resgate") && (S.cfg.metas||[]).length ? `<span class="pill y"><select id="pvMeta" aria-label="Meta">${S.cfg.metas.map(m=>`<option value="${m.id}" ${p.meta===m.id?"selected":""}>${esc(m.nome)}</option>`).join("")}</select></span>` : "";
@@ -1302,12 +1397,23 @@ function atualizarPreview(){
   pv.innerHTML = `<span class="pill ${tipoL[1]}">${tipoL[0]}</span><span class="pill num">${p.parcelas>1?p.parcelas+"× "+fm(p.valor/p.parcelas):fm(p.valor)}</span>${catSel}${metaSel}<span class="pill">${esc(d)}</span><span class="hint">${esc(p.desc)}</span>`;
 }
 async function lancarDaBarra(){
-  if (!atualP) return;
+  const texto = $("#q").value;
+  if (!atualP){ if (S.ai && texto.trim()){ $("#q").value=""; atualizarPreview(); iaExtrair(texto); } return; }
   if (atualP.lote){
-    const rows = atualP.lote.map((p,i)=> p ? {data:p.data, desc:p.desc, valor:p.valor, tipo:p.tipo==="resgate"?"interno":p.tipo, cat:p.cat, meta:p.meta, parcelas:p.parcelas} : null).filter(Boolean);
-    const falhas = atualP.lote.filter(p=>!p).length;
-    if (!rows.length && S.sample){ iaExtrair(atualP.linhas.join("\n")); return; }
-    folhaLote(rows, `${rows.length} lançamentos`, falhas ? `${falhas} linha(s) não entendi${S.sample?" — use Importar › Ler com IA para elas":""}.` : null);
+    const L = atualP.lote, falhas = atualP.falhas||[];
+    if (!L.length){ if (S.ai){ $("#q").value=""; atualizarPreview(); iaExtrair(texto); } return; }
+    if (atualP.multi || falhas.length || L.length>6){
+      const rows = L.map(p=>({data:p.data, desc:p.desc, valor:p.valor, tipo:p.tipo, cat:p.cat, meta:p.meta, rec:p.rec, parcelas:p.parcelas}));
+      folhaLote(rows, `${rows.length} lançamentos`, falhas.length ? `Não achei valor em: “${falhas.join("”, “")}”.${S.ai?" Se preferir, use Ler com IA.":""}` : null);
+      return;
+    }
+    $("#q").value = ""; atualizarPreview();
+    try{
+      let ids = []; for (const p of L) ids = ids.concat(await lancarParsed(p));
+      const tot = (t)=>sum(L.filter(p=>p.tipo===t),p=>p.valor);
+      const partes = [tot("receita")?`+${fm(tot("receita"))}`:"", tot("gasto")?`−${fm(tot("gasto"))}`:"", tot("aporte")?`guardado ${fm(tot("aporte"))}`:""].filter(Boolean).join(" · ");
+      toast(`${L.length} lançamentos: ${partes}`, async ()=>{ for (const id of ids) await apagarLanc(id); toast("Desfeito"); }, 6000);
+    }catch(e){ toast("Não consegui salvar. Confira a conexão e tente de novo."); }
     return;
   }
   const p = Object.assign({}, atualP);
@@ -1377,16 +1483,16 @@ async function acao(a, el){
     case "apagarGrupo": { if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="Confirmar"; return; }
       fecharFolha(); const ids = [...S.lanc.entries()].filter(([,d])=>d.grupo===arg).map(([id])=>id); for (const id of ids) await apagarLanc(id); toast(`${ids.length} parcelas apagadas`); return; }
     case "lancarLote": { const rows = (memo.get("lote")||[]).filter(r=>r._on && r.tipo!=="interno" && r.valor>0); fecharFolha();
-      let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:r.tipo==="aporte"?(r.meta||S.cfg.metas[0]?.id):null, data:r.data, parcelas:r.parcelas||1, origem:"importado"})); }
+      let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:(r.tipo==="aporte"||r.tipo==="resgate")?(r.meta||S.cfg.metas[0]?.id):null, rec:r.tipo==="receita"?r.rec:null, data:r.data, parcelas:r.parcelas||1, origem:"importado"})); }
       toast(`${rows.length} lançamentos adicionados`, async()=>{ for (const id of all) await apagarLanc(id); toast("Desfeito"); }); return; }
     case "importBackup": { const inp = document.createElement("input"); inp.type="file"; inp.accept=".json,application/json"; inp.onchange = async ()=>{ const f = inp.files[0]; if (f) importarBackup(await f.text()); }; inp.click(); return; }
     case "sair": await FB.authM.signOut(FB.auth); location.reload(); return;
     case "escolherCsv": $("#fileIn").click(); return;
     case "colarLer": { const t = $("#pasteIn").value; if (!t.trim()) return; const csv = importarCSV(t);
       if (csv && csv.length){ folhaLote(csv, `${csv.length} lançamentos do extrato`); return; }
-      const ps = t.split("\n").map(parseLinha).filter(Boolean);
-      if (!ps.length){ if (S.sample) iaExtrair(t); else toast("Não entendi esse texto."); return; }
-      folhaLote(ps.map(p=>({data:p.data, desc:p.desc, valor:p.valor, tipo:p.tipo==="resgate"?"interno":p.tipo, cat:p.cat, meta:p.meta, parcelas:p.parcelas})), `${ps.length} lançamentos`); return; }
+      const ps = parseTexto(t).itens;
+      if (!ps.length){ if (S.ai) iaExtrair(t); else toast("Não entendi esse texto."); return; }
+      folhaLote(ps.map(p=>({data:p.data, desc:p.desc, valor:p.valor, tipo:p.tipo, cat:p.cat, meta:p.meta, rec:p.rec, parcelas:p.parcelas})), `${ps.length} lançamentos`); return; }
     case "colarIA": { const t = $("#pasteIn").value; if (!t.trim()) return; fecharFolha(); iaExtrair(t); return; }
     case "iaLinha": { const t = $("#q").value; if (!t.trim()) return; $("#q").value=""; atualizarPreview(); iaExtrair(t); return; }
     case "exportJson": return baixar("caderneta-backup-"+hoje()+".json", JSON.stringify({cfg:S.cfg, lancamentos:Object.fromEntries(S.lanc), historico:S.hist}, null, 1), "application/json");
@@ -1438,10 +1544,10 @@ $("#q").addEventListener("paste", ()=>setTimeout(atualizarPreview,0));
 $("#goBtn").onclick = lancarDaBarra;
 $("#pv").addEventListener("change", e=>{ if (e.target.id==="pvCat" && atualP && !atualP.lote){ /* mantém escolha */ } });
 $("#fileBtn").onclick = folhaColar;
-$("#shotBtn").onclick = ()=>{ if (!S.sample){ toast("A leitura de prints só funciona com o app aberto no Claude."); return; } $("#shotIn").click(); };
+$("#shotBtn").onclick = ()=>{ if (!S.ai){ toast(S.modo==="firebase" ? "Entre com sua conta Google para ler prints." : "A leitura de prints só funciona com o app aberto no Claude."); return; } $("#shotIn").click(); };
 $("#shotIn").onchange = e=>{ const fs = [...e.target.files]; e.target.value=""; if (fs.length) iaExtrair(null, fs.slice(0,5)); };
 $("#fileIn").onchange = async e=>{ const f = e.target.files[0]; e.target.value=""; if (!f) return; const txt = await f.text(); fecharFolha();
-  const rows = importarCSV(txt); if (rows && rows.length) folhaLote(rows, `${rows.length} lançamentos de ${f.name}`); else if (S.sample) iaExtrair(txt); else toast("Não reconheci esse arquivo."); };
+  const rows = importarCSV(txt); if (rows && rows.length) folhaLote(rows, `${rows.length} lançamentos de ${f.name}`); else if (S.ai) iaExtrair(txt); else toast("Não reconheci esse arquivo."); };
 document.addEventListener("input", e=>{
   const t = e.target;
   if (t.id==="busca"){ S.ext.busca = t.value; render(); return; }
@@ -1478,14 +1584,14 @@ window.addEventListener("scroll", ()=>$("#top").classList.toggle("scrolled", win
 
 /* ---------- conexão ---------- */
 const FB_CFG = {apiKey:"AIzaSyA7FLZU72kH_8XIiwVFwoIA1AC-koh_EYU",authDomain:"caderneta-80f6f.firebaseapp.com",projectId:"caderneta-80f6f",storageBucket:"caderneta-80f6f.firebasestorage.app",messagingSenderId:"369498602261",appId:"1:369498602261:web:86b8fc5d9fa870cfb7471c"};
-const FB_V = "10.12.0";
+const FB_V = "12.19.0";
 let FB = null;
 async function iniciar(){
   S.online = null; render();
   const claude = window.claude;
   if (claude && claude.use){
     S.modo = "claude";
-    claude.use("sample").then(s=>{ S.sample = s; atualizarPreview(); if (S.view==="historico") render(); });
+    claude.use("sample").then(s=>{ S.sample = s; if (s) S.ai = iaClaude(s); atualizarPreview(); if (S.view==="historico") render(); });
     claude.use("downloads").then(d=>{ S.downloads = d; });
     const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
     const id = user ? await user.id() : null;
@@ -1502,11 +1608,12 @@ async function iniciarFirebase(){
     const app = appM.initializeApp(FB_CFG, "caderneta");
     let fdb; try{ fdb = fsM.initializeFirestore(app, {localCache: fsM.persistentLocalCache({tabManager: fsM.persistentMultipleTabManager()})}); }catch(e){ fdb = fsM.getFirestore(app); }
     const auth = authM.getAuth(app);
-    FB = {authM, auth, fsM, fdb};
+    FB = {authM, auth, fsM, fdb, app};
     authM.onAuthStateChanged(auth, u=>{
       if (!u){ S.online = false; S.db = null; bannerLogin(); render(); return; }
       if (S.db) return;
       $("#banner").innerHTML = "";
+      S.ai = iaGemini(); atualizarPreview();
       conectar(adaptadorFirestore(fsM, fdb), `caderneta/${u.uid}`);
     });
   }catch(e){ S.online = false; banner("Não consegui conectar ao Firebase. Confira a internet e recarregue."); render(); }
@@ -1537,13 +1644,13 @@ function conectar(db, base){
   cfgRef.onSnapshot(snap=>{
     S.gotCfg = true;
     if (snap.exists){ if (!cfgWriting && !cfgDirty){ S.cfg = Object.assign(clone(CFG_PADRAO), clone(snap.data())); S.cfg.regras ||= {}; S.cfg.pulados ||= {}; } S.cfgExists = true; }
-    render(); if (S.gotLanc && !snap.metadata.fromCache) autoFixos();
-  }, ()=>{ S.online=false; toast("Sem permissão para ler os dados. Confira as regras do Firestore."); render(); });
+    render(); if (S.lancServidor && !snap.metadata.fromCache) autoFixos();
+  }, ()=>{ S.gotLanc = true; render(); banner(S.modo==="firebase" ? "O Firebase recusou o acesso aos dados. Confira as regras do Firestore (coleção caderneta)." : "Não consegui ler seus dados. Recarregue a página."); });
   lancCol.onSnapshot(snap=>{
     S.lanc = new Map(snap.docs.map(d=>[d.id, d.data()]));
-    S.gotLanc = !snap.metadata.fromCache || S.gotLanc;
-    render(); if (S.gotCfg && S.gotLanc) autoFixos();
-  }, e=>{ toast("A sincronização caiu. Recarregue a página."); });
+    S.gotLanc = true; S.lancServidor = S.lancServidor || !snap.metadata.fromCache;
+    render(); if (S.gotCfg && S.lancServidor) autoFixos();
+  }, e=>{ S.gotLanc = true; render(); banner(S.modo==="firebase" ? "O Firebase recusou o acesso aos dados. Confira as regras do Firestore (coleção caderneta)." : "A sincronização caiu. Recarregue a página."); });
   histCol.onSnapshot(snap=>{ const h = {}; for (const d of snap.docs) h[d.id] = d.data(); S.hist = h; render(); }, ()=>{});
 }
 async function importarBackup(txt){
