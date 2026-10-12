@@ -930,12 +930,23 @@ function viewEntrada(){
       <div class="confete" aria-hidden="true" style="position:static;margin-bottom:18px"><i style="background:var(--blue)"></i><i style="background:var(--tang)"></i><i style="background:var(--amber)"></i><i style="background:var(--mint)"></i><i style="background:var(--pink)"></i></div>
       <h1>Caderneta</h1>
       <p class="lead">Controle financeiro pessoal: lance gastos e receitas em uma linha, acompanhe o orçamento do mês e as metas de poupança.</p>
-      ${carregando ? `<p class="note">Carregando…</p>`
+      ${carregando ? `<p class="note">Carregando…</p>${S.travou?`<p class="note">Está demorando mais que o normal.${ultimoErro?`<br><small>${esc(ultimoErro.slice(0,300))}</small>`:""}</p><div class="btns" style="justify-content:center"><button class="btn" onclick="location.reload()">Recarregar</button></div>`:""}`
         : S.modo==="firebase" ? `<button class="btn green" data-act="login" style="padding:12px 22px;font-size:15px">Entrar com Google</button><p class="note" style="margin-top:14px">Seus dados ficam na sua conta e só aparecem depois de entrar.</p>`
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
+const VERSAO = "12/10 14:10";
+let ultimoErro = "";
+window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
+window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
 function render(){
+  try{ renderInterno(); }
+  catch(e){
+    ultimoErro = String(e?.stack||e);
+    $("#view").innerHTML = `<div class="panel" style="border:2px solid var(--danger)"><b>Algo deu errado ao montar a tela.</b><p class="note">Me mande um print desta mensagem.</p><pre style="white-space:pre-wrap;font-size:12px;overflow:auto;max-height:240px">${esc(ultimoErro).slice(0,1500)}</pre><p class="note">versão ${VERSAO}</p><div class="btns"><button class="btn" data-act="sair">Sair e usar sem login</button><button class="btn" onclick="location.reload()">Recarregar</button></div></div>`;
+  }
+}
+function renderInterno(){
   document.body.classList.toggle("deslogado", !S.db);
   if (!S.db){ renderTabs(); $("#view").innerHTML = viewEntrada(); return; }
   renderTabs();
@@ -1052,6 +1063,7 @@ function viewMes(){
       <div class="goal-bar" style="height:12px;margin:12px 0 6px"><span class="f" style="width:${p.toFixed(1)}%"></span></div>
       <div class="goal-meta"><span>${p.toFixed(1).replace(".",",")}% de ${fm0(mt.alvo)}</span><span>faltam <b>${fm0(Math.max(0,mt.alvo-s))}</b></span></div></section>`; }).join("");
 
+  if (vazio && S.travou) return `<div class="grid"><div class="panel empty"><b>Seus dados não chegaram.</b>O Firebase não respondeu.${ultimoErro?`<br><small>${esc(ultimoErro.slice(0,300))}</small>`:""}<div class="btns" style="justify-content:center"><button class="btn" data-act="sair">Sair e usar sem login</button><button class="btn" onclick="location.reload()">Recarregar</button></div><p class="note">versão ${VERSAO}</p></div></div>`;
   if (vazio) return `<div class="grid"><div class="panel empty"><b>Carregando sua caderneta…</b>${S.modo==="firebase" ? "Conectando ao seu Firebase. Se passar de alguns segundos, recarregue a página." : "Se demorar, abra este link no Claude conectado à sua conta."}</div></div>`;
   const cartPanel = painelCartao(m);
   return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${alertas}${recPanel}${fixPanel}${metas}</div></div>`;
@@ -1267,6 +1279,7 @@ function viewAjustes(){
     </section>
     <section class="panel"><div class="panel-h"><h2 style="--hc:var(--teal)">Backup</h2></div>
       <div class="btns"><button class="btn" data-act="exportJson">Baixar tudo (JSON)</button><button class="btn" data-act="exportCsv">Baixar extrato (CSV)</button><button class="btn" data-act="importBackup">Importar backup</button></div>
+      <p class="note">Versão do app: ${VERSAO}</p>
       <p class="note">O backup em JSON leva tudo de uma versão da Caderneta para outra (do Claude para o site, por exemplo).</p>
       ${S.modo==="firebase" && FB?.auth?.currentUser ? `<div class="btns"><button class="btn danger" data-act="sair">Sair da conta Google</button></div>` : ""}
     </section>
@@ -1833,6 +1846,7 @@ function banner(t){ $("#banner").innerHTML = `<div class="banner">${esc(t)}</div
 
 render();
 iniciar();
+setTimeout(() => { if (S.online===null || (S.db && !S.gotLanc)){ S.travou = true; render(); } }, 12000);
 })();
 </script>
 </body></html>
