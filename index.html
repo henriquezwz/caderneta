@@ -488,6 +488,7 @@ main{max-width:1120px;margin:18px auto 0}
 .novacat button{border:0;border-radius:8px;padding:0 12px;font-weight:700;background:var(--blue);color:#fff;cursor:pointer}.novacat button.x{background:var(--line);color:var(--ink)}
 .conv-app{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:5px solid var(--tang);border-radius:14px;padding:12px 14px;box-shadow:0 12px 30px -12px rgba(20,27,52,.35);font-size:14px;max-width:520px;margin:0 auto}
 .conv-app span{flex:1 1 220px}.conv-app button{border:0;border-radius:10px;padding:9px 14px;font-weight:700;background:var(--tang);color:#fff;cursor:pointer}.conv-app button.x{background:none;color:var(--muted);padding:9px 6px}
+.ph-links{display:flex;flex-wrap:wrap;gap:4px 16px}
 .ph-min{display:flex;width:100%;justify-content:space-between;align-items:center;text-align:left;cursor:pointer;color:var(--ink);font:inherit}.ph-min span:first-child{display:grid;gap:2px}.ph-min small{color:var(--muted);font-size:12.5px}.ph-chev{font-size:18px;color:var(--tang)}
 .ph-hb{display:flex;gap:10px;align-items:center}.ph-fechar{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;width:30px;height:28px;cursor:pointer;font-size:14px}
 .sep-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.sep-top div{background:var(--surface-2,var(--blue-soft));border-radius:12px;padding:10px}.sep-top small{display:block;color:var(--muted);font-size:12px}.sep-top b{font-size:17px}.sep-top .neg b{color:var(--danger)}.sep-top .pos b{color:var(--mint)}
@@ -1243,7 +1244,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 19:50";
+const VERSAO = "12/10 20:05";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1527,7 +1528,9 @@ function blocoPlano(m, R){
   const mt = (S.cfg.metas||[])[0]; const edG = memo.get("fxGuardar")===m, novoG = memo.get("guardarAgora")===m;
   const guardarSec = !mt ? "" : `<div class="ph-sec"><div class="ph-l"><span class="ph-tit"><button class="ph-tk ${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?"on":""}" data-act="${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?"noop":"guardarPlano:"+m}" aria-label="Guardar o previsto">${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?ck():""}</button>Guardar em ${esc(mt.nome)} <small>${R.guardado?`guardado ${fm0(R.guardado)} · `:""}saldo ${fm0(saldoMeta(mt))}</small></span>
       ${edG ? `<span class="inl"><input id="guardVal" inputmode="decimal" value="${R.metaMensal?BRL.format(R.metaMensal):""}"><button data-act="confirmaGuardar:${m}">OK</button></span>` : `<button class="ph-v neg num" data-act="editarGuardar:${m}" title="Quanto quer guardar este mês">−${fm0(Math.max(R.metaMensal, R.guardado))}</button>`}</div>
-      ${novoG ? `<div class="ph-add"><input id="guardAgora" inputmode="decimal" placeholder="Quanto guardar agora?"><button data-act="confirmaGuardarAgora:${m}">OK</button></div>` : `<button class="aj-link" data-act="guardarAgora:${m}">+ guardar outro valor agora</button>`}</div>`;
+      ${novoG ? `<div class="ph-add"><input id="guardAgora" inputmode="decimal" placeholder="Quanto você guardou agora?"><button data-act="confirmaGuardarAgora:${m}">OK</button></div>`
+        : memo.get("saldoPlano")===m ? `<div class="ph-add"><input id="saldoPlanoIn" inputmode="decimal" placeholder="Saldo de hoje na ${esc(mt.nome)}" value=""><button data-act="confirmaSaldoPlano:${mt.id}">OK</button></div><small class="ph-dica">Digite quanto tem hoje na poupança (olhe no app do banco). O app passa a contar a partir daí.</small>`
+        : `<div class="ph-links"><button class="aj-link" data-act="guardarAgora:${m}">+ guardei um valor</button><button class="aj-link" data-act="saldoPlano:${m}">informar saldo da poupança</button></div>`}</div>`;
   const gastosFora = r2(R.planSobra - R.caixaLivre);
   const semPlanilha = !S.visitante && S.gotCfg && !Object.keys(S.hist).length && !(S.cfg.fixos||[]).filter(f=>!f.soMes).length;
   const dia = new Date().getDate(), revisar = !semPlanilha && m===atual && dia<=12 && !(S.cfg.revisado||{})[m] && (S.cfg.fixos||[]).length;
@@ -1994,11 +1997,15 @@ Responda só com JSON: [{"i": índice, "cat": "id"}]`;
     toast(`A IA pôs categoria em ${n} ${n>1?"compras":"compra"} que eu não reconheci. Elas têm a marca ✦.`, null, 5000);
   }catch(e){ memo.delete("catIA"); }
 }
-function estadoLinha(r){ return r._dupId && !r._on ? "existe" : !r._on ? "fora" : (r.cartao && r.tipo==="gasto" && r.pago) ? "pago" : "lancar"; }
+function estadoLinha(r){ return r._dupId && !r._on ? (r.cartao && r.tipo==="gasto" && r.pago ? "pago" : "existe") : !r._on ? "fora" : (r.cartao && r.tipo==="gasto" && r.pago) ? "pago" : "lancar"; }
 function folhaLote(rows, titulo, nota, venc, manter){
   if (!manter){
     const usados = new Set();
-    rows.forEach(r=>{ const id = acharDuplicado(r); if (id && !usados.has(id)){ usados.add(id); r._dupId = id; r._on = false; } else { r._dupId = null; r._on = r.tipo!=="interno"; } });
+    rows.forEach(r=>{ const id = acharDuplicado(r); if (id && !usados.has(id)){ usados.add(id); r._dupId = id; r._on = false; const ex = S.lanc.get(id);
+        // compra que já estava: mantém o que você marcou antes (pago ou não)
+        if (ex && ex.cartao && ex.tipo==="gasto" && ex.pagoEm){ r.pago = true; r._exPago = true; r.pagoMes = ex.pagoEm; r._jaPago = !ex.aPagar; r._exAPagar = !!ex.aPagar; } else { r.pago = false; r._exPago = false; }
+        if (ex && ex.cat && !r.cat) r.cat = ex.cat; }
+      else { r._dupId = null; r._on = r.tipo!=="interno"; } });
     memo.delete("catIA"); memo.delete("loteMexeu"); setTimeout(categorizarLoteIA, 60);
   }
   const ehFatura = rows.some(r=>r.cartao || r.tipo==="pagfatura");
@@ -2027,9 +2034,12 @@ function folhaLote(rows, titulo, nota, venc, manter){
           <p class="note" style="margin:0">“Já paguei” conta como gasto do mês da compra. Para mudar, toque na compra.</p>
         </div></div>`
       : (rows.some(r=>r.tipo==="gasto") ? `<button type="button" class="linkbtn" data-act="loteEhFatura" style="margin-bottom:10px">Isto é uma fatura de cartão de crédito</button>` : "")}
-    ${nDup?`<div class="fatbox" style="background:var(--amber-soft)"><b>${nDup} ${nDup>1?"compras já estavam":"compra já estava"} no app</b> (mesmo valor, até 3 dias de diferença). Ficaram como “Já está no app” e não serão lançadas de novo. Se for outra compra, toque em Lançar.</div>`:""}
+    ${nDup?(()=>{ const dups = rows.filter(r=>r._dupId), pagas = dups.filter(r=>r._exPago), novas = rows.filter(r=>!r._dupId && r.tipo!=="interno");
+      return `<div class="fatbox" style="background:var(--amber-soft)"><b>${ehFatura?"Atualizando a fatura":"Parte disso já estava no app"}: ${dups.length} ${dups.length>1?"compras já estavam":"compra já estava"}${pagas.length?`, ${pagas.length} delas já ${pagas.length>1?"marcadas":"marcada"} como pagas ou a pagar este mês (${fm0(sum(pagas,r=>+r.valor||0))})`:""}. ${novas.length} ${novas.length>1?"novas entram":"nova entra"} agora.</b> O que você marcou antes continua marcado e nada é lançado duas vezes. Se uma compra repetida for mesmo outra, toque em “É outra compra”.</div>`; })():""}
     <div class="lote-lista">${rows.map((r,i)=>{ const st = estadoLinha(r); const ex = r._dupId ? S.lanc.get(r._dupId) : null;
-      const opts = [["lancar", (r.cartao && r.tipo==="gasto" && modoFatura()) ? "Na fatura" : "Lançar"], ...((r.cartao && r.tipo==="gasto") ? [["pago", rotPago(r)]] : []), [r._dupId?"existe":"fora", r._dupId?"Já está no app":"Não lançar"]];
+      const opts = r._dupId
+        ? [["existe", (r.cartao && r.tipo==="gasto") ? "Na fatura (já no app)" : "Já está no app"], ...((r.cartao && r.tipo==="gasto") ? [["pago", rotPago(r)]] : []), ["lancar","É outra compra"]]
+        : [["lancar", (r.cartao && r.tipo==="gasto" && modoFatura()) ? "Na fatura" : "Lançar"], ...((r.cartao && r.tipo==="gasto") ? [["pago", rotPago(r)]] : []), ["fora","Não lançar"]];
       return `<div class="lc ${st}" data-lc="${i}">
         <div class="lc-top" data-act="loteAbrir:${i}"><span class="lc-dt">${r.data.slice(8)}/${r.data.slice(5,7)}</span><span class="lc-ds">${esc(r.desc)}${ex?`<small>já lançado como “${esc(ex.desc)}” em ${ex.data.slice(8)}/${ex.data.slice(5,7)}</small>`:""}</span><b class="lc-v">${fm(r.valor)}</b></div>
         <div class="lc-meta"><span class="dot" style="--cc:${corCat(r.cat)}"></span>${esc(r.tipo==="gasto"?catNome(r.cat):(tipos.find(t=>t[0]===r.tipo)||[])[1]||r.tipo)}${r._catIA?` <span class="lc-ia" title="categoria escolhida pela IA">✦</span>`:""}${r.parcInfo?` · parcela ${esc(r.parcInfo)}`:""}${ehFatura?` · <span data-contaem="${i}">${contaEmTxt(r)}</span>`:""}${r._sug && r.pago?` · <span class="lc-sug">sugestão</span>`:""}${(r.nota||+r.parte)?` · <span class="lc-tag">${+r.parte?`${esc(r.quem||"alguém")} paga ${fm0(r.parte)}`:"comentário"}</span>`:""}</div>
@@ -2049,7 +2059,7 @@ function alvoLote(){
   const el = $("#loteAlvo"); if (!el) return; const rows = memo.get("lote")||[];
   const txt = $("#loteFalta")?.value||""; const falta = parseValor(txt);
   const total = sum(rows.filter(r=>r.cartao && r.tipo==="gasto" && (r._on || r._dupId)), r=>+r.valor||0);
-  const pagosLinhas = sum(rows.filter(r=>r.cartao && r.tipo==="gasto" && r._on && r.pago && !ehAPagar(r)), r=>+r.valor||0);
+  const pagosLinhas = sum(rows.filter(r=>r.cartao && r.tipo==="gasto" && (r._on || r._dupId) && r.pago && !ehAPagar(r)), r=>+r.valor||0);
   const pagfat = sum(rows.filter(r=>r.tipo==="pagfatura" && (r._on || r._dupId)), r=>+r.valor||0);
   if (!txt){ el.innerHTML = `Total das compras: <b>${fm(total)}</b>. Se o banco cobra menos que isso, a diferença é o que você já pagou.`; $("#loteAutoBtn").hidden = true; return; }
   const alvo = r2(total - pagfat - falta), dif = r2(pagosLinhas - alvo);
@@ -2469,6 +2479,10 @@ async function acao(a, el){
     case "apagarItem": { if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="Toque de novo para apagar"; setTimeout(()=>{ if (el.isConnected){ el.dataset.sure=""; el.textContent="Apagar item"; } }, 3000); return; }
       const f = S.cfg.fixos.find(x=>x.id===arg); if (!f) return; const pos = S.cfg.fixos.indexOf(f); S.cfg.fixos.splice(pos,1); memo.delete("itemAberto"); salvarCfg(true);
       toast(`“${f.nome}” apagado do plano`, ()=>{ S.cfg.fixos.splice(pos,0,f); salvarCfg(true); render(); }); return; }
+    case "saldoPlano": memo.set("saldoPlano", arg); memo.delete("guardarAgora"); render(); setTimeout(()=>$("#saldoPlanoIn")?.focus(),0); return;
+    case "confirmaSaldoPlano": { const v = parseValor($("#saldoPlanoIn")?.value||""); memo.delete("saldoPlano"); const mt = S.cfg.metas.find(x=>x.id===arg); if (!mt || !(v>=0)){ render(); return; }
+      const antes = saldoMeta(mt); const velho = {saldoBase: mt.saldoBase, dataBase: mt.dataBase}; mt.saldoBase = v; mt.dataBase = isoDate(new Date(Date.now()+864e5)); salvarCfg(true);
+      toast(`Saldo da ${mt.nome}: ${fm(v)}${Math.abs(v-antes)>=1?` (${v>=antes?"+":"−"}${fm(Math.abs(v-antes))} em relação ao que o app tinha)`:""}`, ()=>{ Object.assign(mt, velho); salvarCfg(true); render(); }, 7000); return; }
     case "planoAbrir": case "planoFechar": try{ localStorage.setItem("caderneta-plano", JSON.stringify({m:arg, aberto: cmd==="planoAbrir"})); }catch(e){} render(); return;
     case "separar": folhaSeparar(arg); return;
     case "sepTog": { const [mm, k] = arg.split("|"); const o = ((S.cfg.separado ||= {})[mm] ||= {}); o[k] = !o[k]; salvarCfg(); folhaSeparar(mm, true); return; }
@@ -2579,7 +2593,9 @@ async function acao(a, el){
       { let aprendeu = 0; for (const r of todas){ if (r._catManual && r.cat && r.tipo==="gasto"){ const k = keyOf(r.desc); if (k && S.cfg.regras[k]!==r.cat){ S.cfg.regras[k] = r.cat; aprendeu++; } } } if (aprendeu) salvarCfg(); }
       let ligados = 0;
       for (const r of todas.filter(r=>!r._on && r._dupId && (r.cartao || r.nota || +r.parte))){ const d = S.lanc.get(r._dupId); if (!d) continue; const nd = Object.assign({}, d);
-        if (r.cartao && d.tipo==="gasto"){ nd.cartao = true; nd.fatura = r.fatura || faturaDe(d.data); }
+        if (r.cartao && d.tipo==="gasto"){ nd.cartao = true; nd.fatura = r.fatura || faturaDe(d.data);
+          if (r.pago){ nd.pagoEm = mesPago(r); if (ehAPagar(r) || (r._exAPagar && nd.pagoEm===d.pagoEm)) nd.aPagar = true; else delete nd.aPagar; delete nd.naFatura; }
+          else if (d.pagoEm){ delete nd.pagoEm; delete nd.aPagar; if (modoFatura()) nd.naFatura = true; } }
         if (r.nota && !d.nota) nd.nota = r.nota;
         if (+r.parte>0 && !d.divide){ const tot = totalDe(d), pt = Math.min(+r.parte, tot); nd.valorTotal = tot; nd.valor = r2(tot-pt); nd.divide = {quem:r.quem||"Alguém", valor:r2(pt), recebido:false}; }
         await gravarLanc(r._dupId, nd); ligados++; }
@@ -2590,11 +2606,12 @@ async function acao(a, el){
     case "estado": { const [i, v] = arg.split(":"); const rows = memo.get("lote"); const r = rows[+i]; if (!r) return;
       memo.set("loteMexeu", true);
       if (v==="pago" && !r.pago && !ehDeFaturaFutura(r) && ($("#loteFalta")?.value||"").trim()){
-        const alvo = memo.get("loteAlvoValor")||0; const marcado = sum(rows.filter(x=>x.cartao && x.tipo==="gasto" && x._on && x.pago && !ehAPagar(x)), x=>+x.valor||0);
+        const alvo = memo.get("loteAlvoValor")||0; const marcado = sum(rows.filter(x=>x.cartao && x.tipo==="gasto" && (x._on || x._dupId) && x.pago && !ehAPagar(x)), x=>+x.valor||0);
         const resta = r2(alvo - marcado);
         if ((+r.valor||0) > resta + 0.5){ toast(resta > 0.5 ? `Passaria do que você já pagou (${fm(alvo)}). Só falta marcar ${fm(resta)}: escolha uma compra de até esse valor ou desmarque outra.` : `Você já marcou tudo o que pagou (${fm(alvo)}). Desmarque outra compra antes.`, null, 7000); return; }
       }
-      if (v==="lancar"){ r._on = true; r.pago = false; } else if (v==="pago"){ r._on = true; r.pago = true; r._jaPago = false; } else { r._on = false; r.pago = false; }
+      if (r._dupId && v!=="lancar"){ r._on = false; r.pago = v==="pago"; if (v==="pago" && !r.pagoMes) r._jaPago = !ehDeFaturaFutura(r); }
+      else if (v==="lancar"){ r._on = true; r.pago = false; } else if (v==="pago"){ r._on = true; r.pago = true; r._jaPago = false; } else { r._on = false; r.pago = false; }
       r._sug = false; const card = document.querySelector(`[data-lc="${i}"]`);
       if (card){ const st = estadoLinha(r); card.classList.remove("lancar","pago","fora","existe"); card.classList.add(st);
         card.querySelectorAll(".lc-seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.act.endsWith(":"+st))));
@@ -2606,10 +2623,11 @@ async function acao(a, el){
     case "loteEhFatura": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r.tipo==="gasto") r.cartao = true; }); sugerirPagos(rows, 0); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), null, true); return; }
     case "lotePagasAuto": { const rows = memo.get("lote"); const alvo = memo.get("loteAlvoValor")||0; let soma = 0;
       memo.set("loteMexeu", true);
-      rows.forEach(r=>{ if (r.cartao && r.tipo==="gasto" && r._on){ if (!ehAPagar(r)){ r.pago = false; r._sug = false; } r._jaPago = false; } });
+      rows.forEach(r=>{ if (r.cartao && r.tipo==="gasto" && (r._on || r._dupId) && !r._exPago){ if (!ehAPagar(r)){ r.pago = false; r._sug = false; } r._jaPago = false; } });
+      soma = sum(rows.filter(r=>r._exPago), r=>+r.valor||0);
       const atualM = mesAtual(); const prio = r => (TIPO_COTIDIANO(r.cat) && mesDe(r.data) < atualM) ? 0 : TIPO_COTIDIANO(r.cat) ? 1 : 2;
       const escolhidas = [];
-      for (const r of rows.filter(r=>r.cartao && r.tipo==="gasto" && r._on).sort((a,b)=>(prio(a)-prio(b)) || (a.data<b.data?-1:1))){ if (soma + (+r.valor||0) <= alvo + 0.01){ r.pago = true; r._sug = true; r._jaPago = true; soma += +r.valor||0; escolhidas.push(r); } }
+      for (const r of rows.filter(r=>r.cartao && r.tipo==="gasto" && (r._on || r._dupId) && !r._exPago).sort((a,b)=>(prio(a)-prio(b)) || (a.data<b.data?-1:1))){ if (soma + (+r.valor||0) <= alvo + 0.01){ r.pago = true; r._sug = true; r._jaPago = true; soma += +r.valor||0; escolhidas.push(r); } }
       const por = {}; escolhidas.forEach(r=>{ const k = TIPO_COTIDIANO(r.cat)||"outras compras"; por[k]=(por[k]||0)+(+r.valor||0); });
       const restA = rows.filter(ehAPagar); const porA = {}; restA.forEach(r=>{ const k = TIPO_COTIDIANO(r.cat)||"outras compras"; porA[k]=(porA[k]||0)+(+r.valor||0); });
       memo.set("sugPago", {n: escolhidas.length, total: soma, por, nA: restA.length, totalA: sum(restA, r=>+r.valor||0), porA});
