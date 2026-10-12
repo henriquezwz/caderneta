@@ -431,6 +431,7 @@ main{max-width:1120px;margin:18px auto 0}
 .fatbox label{font-weight:600;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .fatbox select{border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--surface)}
 .contaem{text-align:center}
+.linkbtn{border:0;background:none;padding:6px 0 0;color:var(--blue);font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:3px}
 .batch tr.extra td{border-top:0;padding-top:0}
 .extra-in{display:grid;grid-template-columns:1.4fr 1fr 110px;gap:6px}
 .mais{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:30px;height:30px;font-weight:700;color:var(--muted)}
@@ -975,7 +976,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 15:30";
+const VERSAO = "12/10 15:40";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1128,9 +1129,9 @@ function painelCartao(m){
   const jaContou = sum(Object.entries(atual.porMes).filter(([k])=>k!==m), ([,v])=>v), contaAgora = atual.porMes[m]||0;
   return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">${/^cart[aã]o$/i.test(cc.nome||"")||!cc.nome ? "Cartão" : "Cartão "+esc(cc.nome)}</h2><button class="act" data-act="cartaoExtrato">Ver compras</button></div>
     <div class="cards2">
-      <div class="fat"><div class="eyebrow">Fatura que vence em ${MES[+m.slice(5)-1]}</div><div class="fat-v">${fm(atual.total)}</div>${atual.pago?`<p class="note" style="margin:0">já pago ${fm0(atual.pago)} · falta <b>${fm0(atual.falta)}</b></p>`:""}
+      <div class="fat"><div class="eyebrow">Fatura que vence em ${MES[+m.slice(5)-1]}</div><div class="fat-v">${fm(atual.total)}</div>${atual.pago?`<p class="note" style="margin:0">já pago ${fm0(atual.pago)} · falta <b>${fm0(atual.falta)}</b></p>`:""}${atual.total?`<button class="linkbtn" data-act="acertarFatura:${m}">Conferir com o banco</button>`:""}
         <p class="note">${atual.total? `${fm0(contaAgora)} pesam neste mês${jaContou?` · ${fm0(jaContou)} já tinham pesado no mês da compra`:""}.` : "Nenhuma compra registrada nela."}</p></div>
-      <div class="fat prox"><div class="eyebrow">Próxima fatura · vence em ${MES[+addMes(m,1).slice(5)-1]}</div><div class="fat-v">${fm(prox.total)}</div>${prox.pago?`<p class="note" style="margin:0">adiantado ${fm0(prox.pago)} · falta <b>${fm0(prox.falta)}</b></p>`:""}
+      <div class="fat prox"><div class="eyebrow">Próxima fatura · vence em ${MES[+addMes(m,1).slice(5)-1]}</div><div class="fat-v">${fm(prox.total)}</div>${prox.pago?`<p class="note" style="margin:0">adiantado ${fm0(prox.pago)} · falta <b>${fm0(prox.falta)}</b></p>`:""}${prox.total?`<button class="linkbtn" data-act="acertarFatura:${addMes(m,1)}">Conferir com o banco</button>`:""}
         <p class="note">${prox.total ? `<b>${fm0(desteMesNaProx)}</b> são gastos deste mês (comida e dia a dia), já descontados do seu “livre”. ${fm0(fica)} ficam para o mês que vem.` : "Mande a fatura aberta para ver o que já é deste mês."}</p></div>
     </div>
     <div class="btns"><button class="btn" data-act="abrirImport">Mandar fatura</button>${atual.itens.length?`<button class="btn" data-act="analisarFatura:${m}">Analisar fatura de ${MES[+m.slice(5)-1]}</button>`:""}${prox.itens.length?`<button class="btn" data-act="analisarFatura:${addMes(m,1)}">Analisar fatura de ${MES[+addMes(m,1).slice(5)-1]}</button>`:""}</div></section>`;
@@ -1787,6 +1788,12 @@ async function acao(a, el){
       let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:(r.tipo==="aporte"||r.tipo==="resgate")?(r.meta||S.cfg.metas[0]?.id):null, rec:r.tipo==="receita"?r.rec:null, data:r.data, parcelas:r.parcelas||1, cartao:!!r.cartao, fatura:r.fatura||null, parcInfo:r.parcInfo||null, nota:r.nota||null, divide: +r.parte>0 ? {quem:r.quem, valor:+r.parte} : null, origem:"importado"})); }
       toast(`${rows.length} lançamentos adicionados${ligados?` · ${ligados} já existentes ligados à fatura`:""}`, async()=>{ for (const id of all) await apagarLanc(id); toast("Desfeito"); }); return; }
     case "abrirImport": folhaColar(); return;
+    case "acertarFatura": { const fi = faturaInfo(arg);
+      abrirFolha(`<h3>Conferir fatura de ${mesLongo(arg)}</h3>
+        <p class="lead">O app soma ${fi.itens.length} compras: <b>${fm(fi.total)}</b>${fi.pago?`, com ${fm(fi.pago)} já pagos`:""}. Pelo app, falta pagar <b>${fm(fi.falta)}</b>.</p>
+        <form id="acertoF" data-venc="${arg}"><div class="fgrid"><label class="full">Quanto falta pagar, segundo o app do banco?<input name="falta" inputmode="decimal" placeholder="Ex.: 2.167,00" required></label></div>
+        <p class="note">Se você adiantou parte da fatura, o banco desconta do total, mas não diz quais compras foram pagas. Para o orçamento isso não importa: cada compra continua contando no mês dela. O app só registra a diferença como pagamento já feito, para o “falta pagar” bater com o banco.</p>
+        <div class="sheet-foot"><button type="button" class="btn" data-close>Cancelar</button><button class="btn green">Conferir</button></div></form>`); return; }
     case "recebi": { const d = S.lanc.get(arg); if (!d?.divide) return; await gravarLanc(arg, Object.assign({}, d, {divide: Object.assign({}, d.divide, {recebido:true, dataRec: hoje()})})); toast(`${d.divide.quem} pagou ${fm(d.divide.valor)}`, async()=>{ await gravarLanc(arg, d); }); return; }
     case "analisarFatura": { const itens = [...S.lanc.values()].filter(d=>(d.cartao && d.tipo==="gasto" && d.fatura===arg) || (d.tipo==="pagfatura" && d.fatura===arg)); folhaAnalise(itens.map(d=>({data:d.data, desc:d.desc, valor:totalDe(d), minha:d.valor, cat:d.cat, tipo:d.tipo, parcInfo:d.parc, fatura:d.fatura, cartao:d.cartao, nota:d.nota, divide:d.divide})), arg, false); return; }
     case "analisarLote": { const rows = (memo.get("lote")||[]).filter(r=>(r._on || r._dupId) && r.tipo!=="interno"); folhaAnalise(rows.map(r=>({data:r.data, desc:r.desc, valor:+r.valor||0, minha:(+r.valor||0) - (+r.parte||0), cat:r.cat, tipo:r.tipo, parcInfo:r.parcInfo, fatura:r.fatura, cartao:r.cartao, nota:r.nota, divide: +r.parte>0?{quem:r.quem,valor:+r.parte}:null})), memo.get("loteVenc"), true); return; }
@@ -1896,6 +1903,10 @@ document.addEventListener("change", e=>{
 document.addEventListener("submit", e=>{
   e.preventDefault();
   if (e.target.id==="askF"){ perguntar($("#askIn").value); return; }
+  if (e.target.id==="acertoF"){ const venc = e.target.dataset.venc; const falta = parseValor(new FormData(e.target).get("falta")); if (!(falta>=0)) return; const fi = faturaInfo(venc); const dif = r2(fi.total - fi.pago - falta); fecharFolha();
+    if (Math.abs(dif) < 0.5){ toast("Bateu: o app e o banco dizem o mesmo valor."); return; }
+    if (dif > 0){ lancarParsed({tipo:"pagfatura", valor:dif, desc:"Pagamentos e abatimentos anteriores", data: hoje(), fatura: venc, origem:"conferencia"}).then(ids=>toast(`Registrei ${fm(dif)} como já pago. Agora falta ${fm(falta)}, igual ao banco.`, async()=>{ for (const id of ids) await apagarLanc(id); }, 8000)); return; }
+    toast(`O banco cobra ${fm(-dif)} a mais do que as compras que o app conhece. Provavelmente falta alguma compra (ou juros/IOF): mande a fatura completa ou lance a diferença.`, null, 10000); return; }
   if (e.target.id==="loginF"){ const fd = new FormData(e.target); const btn = e.target.querySelector("button.green"); btn.disabled = true; btn.textContent = "Entrando…";
     const limite = new Promise((_, rej) => setTimeout(() => rej({code:"tempo"}), 15000));
     Promise.race([FB.authM.signInWithEmailAndPassword(FB.auth, String(fd.get("email")).trim(), String(fd.get("senha"))), limite])
