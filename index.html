@@ -975,7 +975,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 15:20";
+const VERSAO = "12/10 15:30";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1577,7 +1577,7 @@ function iaClaude(sample){ return {
   erro: e => ({not_granted:"Você não liberou o uso do Claude para este app.", rate_limited:"Muitas leituras seguidas. Espere um pouco.", images_unavailable:"Este aparelho não consegue enviar imagens. Cole o texto.", invalid_json:"A leitura veio confusa. Tente de novo."})[e?.code]
 };}
 function iaGemini(){
-  const MODELOS = ["gemini-2.5-flash","gemini-flash-latest","gemini-3-flash-preview","gemini-2.5-flash-lite","gemini-2.0-flash"];
+  const MODELOS = ["gemini-3.8-flash","gemini-3-flash-preview","gemini-flash-latest","gemini-3.5-flash-lite"];
   let idx = 0; try{ const salvo = localStorage.getItem("caderneta-modelo"); if (salvo && MODELOS.includes(salvo)) idx = MODELOS.indexOf(salvo); }catch(e){}
   async function modelo(json){
     FB.aiM ||= await import(`https://www.gstatic.com/firebasejs/${FB_V}/firebase-ai.js`);
