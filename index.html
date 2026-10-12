@@ -488,6 +488,15 @@ main{max-width:1120px;margin:18px auto 0}
 .novacat button{border:0;border-radius:8px;padding:0 12px;font-weight:700;background:var(--blue);color:#fff;cursor:pointer}.novacat button.x{background:var(--line);color:var(--ink)}
 .conv-app{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:5px solid var(--tang);border-radius:14px;padding:12px 14px;box-shadow:0 12px 30px -12px rgba(20,27,52,.35);font-size:14px;max-width:520px;margin:0 auto}
 .conv-app span{flex:1 1 220px}.conv-app button{border:0;border-radius:10px;padding:9px 14px;font-weight:700;background:var(--tang);color:#fff;cursor:pointer}.conv-app button.x{background:none;color:var(--muted);padding:9px 6px}
+.ac-row{display:block;width:100%}.ac-row .env-top{align-items:center}.ac-nm{background:none;border:0;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer;flex:1;min-width:0}
+.ac-v{background:none;border:0;padding:4px 0 4px 8px;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.ac-v b{color:var(--ink)}.ac-v u{text-decoration:underline dotted;text-underline-offset:3px;color:var(--ink)}
+.ac-inl{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}.ac-inl input{width:90px;padding:6px 8px;border:1.5px solid var(--blue);border-radius:8px;font-size:15px}.ac-inl button{border:0;border-radius:8px;background:var(--blue);color:#fff;font-weight:700;padding:6px 10px}
+.ac-row .track{cursor:pointer}
+.txw{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 30px;align-items:center}.txw>.tx{grid-column:1;grid-row:1}
+.tx-del{grid-column:2;grid-row:1;width:28px;height:28px;border:0;border-radius:8px;background:none;color:var(--muted);font-size:14px;cursor:pointer}.tx-del:hover,.tx-del:focus-visible{background:var(--danger-soft);color:var(--danger)}
+.ext-top{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-bottom:12px}.ext-top .note{margin:0;font-size:12.5px}
+.imps{display:grid;gap:6px;margin-bottom:12px}.imp{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between;background:var(--amber-soft);border-radius:10px;padding:8px 10px}.imp span{display:grid}.imp small{color:var(--muted)}
+.ph-ini{display:grid;gap:6px;background:var(--surface);border:1.5px solid var(--mint);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:13.5px}.ph-ini.rev{border-color:var(--blue)}.ph-ini .btn{justify-self:start}
 .ph-sec{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
 .ph-tit{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ph-tk{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--line);background:var(--surface);display:inline-grid;place-items:center;color:#fff;padding:0;cursor:pointer}.ph-tk.on,.ph-it.ok .ph-tk{background:var(--mint);border-color:var(--mint)}
@@ -623,7 +632,7 @@ body.deslogado .quick,body.deslogado .tabs,body.deslogado .tabs-top,body.desloga
     </div>
     <div class="preview" id="pv"><span class="hint">Escreva do jeito que falaria. Cole a notificação do Nubank. Ou mande o print da fatura.</span></div>
     <input type="file" id="shotIn" accept="image/*" multiple hidden>
-    <input type="file" id="fileIn" accept=".csv,text/csv,.txt" hidden>
+    <input type="file" id="fileIn" accept=".csv,text/csv,.txt,.ofx,.qfx" hidden>
   </div>
 </header>
 <div id="banner"></div>
@@ -984,6 +993,7 @@ async function lancarParsed(p, opts={}){
     else if (p.naFatura && doc.cartao) doc.naFatura = true;
     if (p.tipo==="pagfatura"){ doc.fatura = p.fatura || faturaDe(p.data); doc.cat = null; doc.revisar = false; }
     if (p.nota) doc.nota = String(p.nota).slice(0,300);
+    if (p.imp) doc.imp = p.imp;
     if (n===1 && p.divide && +p.divide.valor>0 && p.tipo==="gasto"){ const parte = Math.min(+p.divide.valor, doc.valor); doc.valorTotal = doc.valor; doc.valor = r2(doc.valor - parte); doc.divide = {quem: String(p.divide.quem||"Alguém").slice(0,40), valor: r2(parte), recebido: false}; }
     if (p.fixo) doc.fixo = p.fixo;
     if (p.rec) doc.rec = p.rec;
@@ -1200,7 +1210,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 18:10";
+const VERSAO = "12/10 19:00";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1211,7 +1221,36 @@ function render(){
     $("#view").innerHTML = `<div class="panel" style="border:2px solid var(--danger)"><b>Algo deu errado ao montar a tela.</b><p class="note">Me mande um print desta mensagem.</p><pre style="white-space:pre-wrap;font-size:12px;overflow:auto;max-height:240px">${esc(ultimoErro).slice(0,1500)}</pre><p class="note">versão ${VERSAO}</p><div class="btns"><button class="btn" data-act="sair">Sair e usar sem login</button><button class="btn" onclick="location.reload()">Recarregar</button></div></div>`;
   }
 }
+/* monta o plano com os itens do último mês da sua planilha (os que se repetem), sem você cadastrar nada */
+async function garantirPlano(){
+  if (S.visitante || !S.gotCfg || !S.gotLanc || S.cfg.planoV3 || S.montandoPlano) return;
+  const meses = Object.keys(S.hist).sort();
+  if (!meses.length && !S.histPronto) return;
+  S.montandoPlano = true;
+  const limpa = n => String(n).replace(/\s*\d+\/\d+\s*$/,"").replace(/\s*pt\s*\d+$/i,"").replace(/\s+/g," ").trim();
+  const chave = n => norm(n).replace(/[^a-z]/g,"");
+  const novos = []; let poup = 0;
+  if (meses.length){
+    const ult6 = meses.slice(-6); const ultimo = [...meses].reverse().find(k => (S.hist[k].itens||[]).length);
+    const conta = k => ult6.filter(mm => (S.hist[mm].itens||[]).some(it => chave(limpa(it[0]))===k)).length;
+    for (const it of (S.hist[ultimo]?.itens||[])){ const bruto = String(it[0]||""), nome = limpa(bruto), k = chave(nome), v = Math.round((+it[2]>0 ? +it[2] : +it[3]) || 0);
+      if (!k || /total|dizimo|investiment/.test(k)) continue;
+      if (/poupan/.test(k)){ poup = v; continue; }
+      if (conta(k) < 2) continue;   // gasto que só apareceu uma vez (ex.: veterinário) não vira fixo
+      novos.push({nome, valor:v, cat: categorizar(bruto) || categorizar(nome) || "outros", env: ENV_RE.test(norm(nome))}); }
+  }
+  if (!novos.some(x=>x.env)) [["Saídas",0,"saidas"],["Outros (dia a dia)",0,"diaadia"]].forEach(([nome,valor,cat]) => novos.push({nome, valor, cat, env:true}));
+  const existentes = (S.cfg.fixos||[]).filter(f=>!f.soMes).map(f=>chave(f.nome)); let n = 0;
+  for (const x of novos){ const k = chave(x.nome); if (existentes.some(e => e===k || e.startsWith(k) || k.startsWith(e))) continue;
+    (S.cfg.fixos ||= []).push({id:"f"+uid(), nome:x.nome, valor:x.valor, dia:0, cat: catById(x.cat) ? x.cat : "outros", varia:true, daPlanilha:true, ...(x.env?{env:true}:{})}); existentes.push(k); n++; }
+  for (const f of S.cfg.fixos||[]) if (!f.soMes && ENV_RE.test(norm(f.nome))) f.env = true;
+  const mt = (S.cfg.metas||[])[0]; if (mt && poup && !(+mt.aporteMensal)) mt.aporteMensal = poup;
+  if (S.cfg.dizimo) S.cfg.dizimo.ativo = false;
+  S.cfg.planoV3 = true; S.cfg.baseV2 = true; S.cfg.baseV1 = true; salvarCfg(true); S.montandoPlano = false;
+  if (n) toast(`Montei o plano com ${n} itens da sua planilha${poup?` e ${fm0(poup)} para guardar`:""}. É só revisar.`, null, 8000);
+}
 function migrarCfg(){
+  garantirPlano();
   if (!S.gotCfg || S.visitante || S.cfg.v3) return; let mudou = false;
   const pet = catById("pet"); if (pet && !/^pet/i.test(pet.nome)){ pet.nome = "Pet"; mudou = true; }
   S.cfg.v3 = true; salvarCfg(true);
@@ -1358,15 +1397,17 @@ function viewMes(){
 function painelAcompanha(m, R){
   const MM = MES[+m.slice(5)-1], aberto = memo.get("itemAberto"), atual = mesDe(hoje());
   const lancsDe = id => R.gastos.filter(g => id==="__fora" ? !R.AT.de.has(g.id) : R.AT.de.get(g.id)===id).sort((a,b)=>a.data<b.data?1:-1);
-  const lista = id => { const ls = lancsDe(id); return `<div class="ac-lista">${ls.length ? ls.map(g=>`<button class="tx sub" data-edit="${g.id}"><span class="d">${esc(g.desc)}</span><span class="val num">− ${fm(g.valor)}</span><span class="m">${g.data.slice(8)}/${g.data.slice(5,7)}${g.cartao?" · cartão":""} · toque para mudar onde entra</span></button>`).join("") : `<p class="note" style="margin:6px 0">Nenhum gasto ainda.</p>`}</div>`; };
+  const lista = id => { const ls = lancsDe(id); return `<div class="ac-lista">${ls.length ? ls.map(g=>`<div class="txw"><button class="tx-del" data-act="apagarRapido:${g.id}" aria-label="Deslançar" title="Deslançar">✕</button><button class="tx sub" data-edit="${g.id}"><span class="d">${esc(g.desc)}</span><span class="val num">− ${fm(g.valor)}</span><span class="m">${g.data.slice(8)}/${g.data.slice(5,7)}${g.cartao?" · cartão":""} · toque para mudar onde entra</span></button></div>`).join("") : `<p class="note" style="margin:6px 0">Nenhum gasto ainda.</p>`}</div>`; };
   const linhaIt = x => { const prev = x.prev, g = x.env ? x.gasto : (x.pago ? (x.lanc?.valor ?? x.gasto) : x.gasto), over = prev>0 && g > prev + 0.5;
-    const w = prev>0 ? Math.min(100, g/prev*100) : (g>0?100:0); const ab = aberto===x.f.id;
-    return `<div class="ac-it ${ab?"open":""}"><button class="env ${over?"over":""}" data-act="verItem:${x.f.id}" style="--cc:${corCat(x.f.cat)}">
-      <div class="env-top"><span class="env-name">${esc(x.f.nome)} ${over?`<span class="env-tag">+${fm0(g-prev)}</span>`:""}${!x.env && x.pago?` <span class="pill g" style="font-size:11px">pago</span>`:""}</span><span class="env-v"><b>${fm0(g)}</b> de ${fm0(prev)}</span></div>
-      <div class="track"><span class="fill" style="width:${w.toFixed(1)}%"></span>${x.env && m===atual && prev>0 ? `<span class="pace" style="left:${(R.decorrido*100).toFixed(1)}%"></span>`:""}</div></button>${ab?lista(x.f.id):""}</div>`; };
+    const w = prev>0 ? Math.min(100, g/prev*100) : (g>0?100:0); const ab = aberto===x.f.id, ed = memo.get("fxPlan2")===x.f.id;
+    return `<div class="ac-it ${ab?"open":""}"><div class="env ac-row ${over?"over":""}" style="--cc:${corCat(x.f.cat)}">
+      <div class="env-top"><button class="ac-nm" data-act="verItem:${x.f.id}"><span class="env-name">${esc(x.f.nome)} ${over?`<span class="env-tag">+${fm0(g-prev)}</span>`:""}${!x.env && x.pago?` <span class="pill g" style="font-size:11px">pago</span>`:""}</span></button>
+      ${ed ? `<span class="inl ac-inl"><b class="num">${fm0(g)}</b> de <input id="planVal2" inputmode="decimal" value="${prev?BRL.format(prev):""}"><button data-act="confirmaPlanVal:${x.f.id}">OK</button></span>`
+           : `<button class="ac-v" data-act="planVal2:${x.f.id}" title="Mudar o valor planejado"><b>${fm0(g)}</b> de <u>${fm0(prev)}</u> ✎</button>`}</div>
+      <div class="track" data-act="verItem:${x.f.id}"><span class="fill" style="width:${w.toFixed(1)}%"></span>${x.env && m===atual && prev>0 ? `<span class="pace" style="left:${(R.decorrido*100).toFixed(1)}%"></span>`:""}</div></div>${ab?lista(x.f.id):""}</div>`; };
   const fs = R.fixosStatus, grupos = [["Dia a dia", fs.filter(x=>x.env)], ["Contas", fs.filter(x=>!x.env && !x.f.soMes)], ["Planejados", fs.filter(x=>x.f.soMes)]];
   const ab = aberto==="__fora";
-  return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--blue)">Gastos de ${MM} por item</h2><button class="act" data-act="planejar:${m}">Planejar</button></div>
+  return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--blue)">Gastos de ${MM} por item</h2><button class="act" data-act="abrirImport">Atualizar com extrato</button></div>
     ${fs.length ? grupos.filter(([,xs])=>xs.length).map(([nome,xs])=>`<div class="grp"><div class="grp-h"><b>${nome}</b><span>${fm0(sum(xs,x=>x.env?x.gasto:(x.pago?(x.lanc?.valor??x.gasto):x.gasto)))} / ${fm0(sum(xs,x=>x.prev))}</span></div>${xs.map(linhaIt).join("")}</div>`).join("")
       : `<p class="note">Monte o plano do mês e cada item aparece aqui com quanto você já gastou nele.</p>`}
     ${R.AT.fora.length ? `<div class="grp"><div class="ac-it ${ab?"open":""}"><button class="env over" data-act="verItem:__fora" style="--cc:var(--muted)"><div class="env-top"><span class="env-name">Fora do plano</span><span class="env-v"><b>${fm0(R.AT.foraTot)}</b> · ${R.AT.fora.length} ${R.AT.fora.length>1?"gastos":"gasto"}</span></div></button>${ab?lista("__fora"):""}</div></div>` : ""}
@@ -1391,7 +1432,11 @@ function blocoPlano(m, R){
       ${edG ? `<span class="inl"><input id="guardVal" inputmode="decimal" value="${R.metaMensal?BRL.format(R.metaMensal):""}"><button data-act="confirmaGuardar:${m}">OK</button></span>` : `<button class="ph-v neg num" data-act="editarGuardar:${m}" title="Quanto quer guardar este mês">−${fm0(Math.max(R.metaMensal, R.guardado))}</button>`}</div>
       ${novoG ? `<div class="ph-add"><input id="guardAgora" inputmode="decimal" placeholder="Quanto guardar agora?"><button data-act="confirmaGuardarAgora:${m}">OK</button></div>` : `<button class="aj-link" data-act="guardarAgora:${m}">+ guardar outro valor agora</button>`}</div>`;
   const gastosFora = r2(R.planSobra - R.caixaLivre);
-  return `<div class="prevhero"><div class="ph-h"><b>Plano de ${MM}</b><button class="aj-link" data-act="planejar:${m}">editar contas</button></div>
+  const semPlanilha = !S.visitante && S.gotCfg && !Object.keys(S.hist).length && !(S.cfg.fixos||[]).filter(f=>!f.soMes).length;
+  const dia = new Date().getDate(), revisar = !semPlanilha && m===atual && dia<=12 && !(S.cfg.revisado||{})[m] && (S.cfg.fixos||[]).length;
+  return `<div class="prevhero">${semPlanilha ? `<div class="ph-ini"><b>Traga sua planilha uma vez só</b><span>Escolha o arquivo <i>caderneta-backup.json</i> que te mandei. Vêm os gastos fixos, a poupança e todo o histórico. Depois, todo mês o plano já vem pronto.</span><button class="btn green" data-act="importBackup">Escolher o arquivo</button></div>` : ""}
+    ${revisar ? `<div class="ph-ini rev"><b>Mês novo: revise o plano de ${MM}</b><span>Os valores vieram do mês passado. Mude o que for diferente e confirme.</span><div class="btns" style="margin:0"><button class="btn" data-act="planejar:${m}">Revisar valores</button><button class="btn green" data-act="revisadoOk:${m}">Está certo</button></div></div>` : ""}
+    <div class="ph-h"><b>Plano de ${MM}</b><button class="aj-link" data-act="planejar:${m}">revisar plano</button></div>
     ${linha("Vai entrar", R.receitaPrev, R.receitaPrev>R.entrou?`recebido ${fm0(R.entrou)}`:"tudo recebido")}
     ${cart}
     <div class="ph-sec">${linha("Contas do mês", -totContas, contas.length?`${contas.filter(x=>x.pago).length} de ${contas.length} pagas`:"nenhuma ainda")}
@@ -1523,7 +1568,7 @@ function grupoFatura(x){
   return `<details class="fatgrp" data-venc="${x.venc}" ${aberto?"open":""}><summary class="tx fg-sum"><span class="d"><span class="fg-ic">▸</span>Fatura do cartão · ${MES[+x.venc.slice(5)-1]}</span><span class="val num">− ${fm(total)}</span>
     <span class="m">${its.length} ${its.length>1?"compras":"compra"}${g.pag?` · <span class="pill g" style="font-size:11.5px">paga ${fm(pagoTot)} em ${g.pag.data.slice(8)}/${g.pag.data.slice(5,7)}</span>`:` · vence em ${mesAb(x.venc)}`}${adiant?` · ${adiant} pagas antes`:""} · toque para ver</span></summary>
     <div class="fg-itens">${g.pag?`<button class="tx sub" data-edit="${g.pag.id}"><span class="d">Pagamento da fatura</span><span class="val num">✓ ${fm(g.pag.valor)}</span><span class="m">não entra no orçamento</span></button>`:""}
-    ${its.map(d=>`<button class="tx sub" data-edit="${d.id}"><span class="d">${esc(d.desc)}</span><span class="val num">− ${fm(d.valor)}</span><span class="m"><span class="dot" style="--cc:${corCat(d.cat)}"></span>${d.data.slice(8)}/${d.data.slice(5,7)} · ${esc(catNome(d.cat))}${d.parc?` · parcela ${d.parc}`:""}${d.pagoEm?(d.aPagar?` · adiantar em ${mesAb(d.pagoEm)}`:` · paga antes, em ${mesAb(d.pagoEm)}`):""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span></button>`).join("")}
+    ${its.map(d=>`<div class="txw"><button class="tx-del" data-act="apagarRapido:${d.id}" aria-label="Deslançar" title="Deslançar">✕</button><button class="tx sub" data-edit="${d.id}"><span class="d">${esc(d.desc)}</span><span class="val num">− ${fm(d.valor)}</span><span class="m"><span class="dot" style="--cc:${corCat(d.cat)}"></span>${d.data.slice(8)}/${d.data.slice(5,7)} · ${esc(catNome(d.cat))}${d.parc?` · parcela ${d.parc}`:""}${d.pagoEm?(d.aPagar?` · adiantar em ${mesAb(d.pagoEm)}`:` · paga antes, em ${mesAb(d.pagoEm)}`):""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span></button></div>`).join("")}
     <button class="aj-link" data-act="analisarFatura:${x.venc}" style="margin:6px 0 4px 12px">Analisar esta fatura</button></div></details>`;
 }
 function viewExtrato(){
@@ -1554,7 +1599,11 @@ function viewExtrato(){
   const byDay = {}; for (const d of L) (byDay[d.data] ||= []).push(d);
   const chip = (id,n) => `<button class="chip" data-ext-tipo="${id}" aria-pressed="${E.tipo===id}">${n}</button>`;
   const catOpts = `<option value="">Todas as categorias</option>`+S.cfg.cats.map(c=>`<option value="${c.id}" ${E.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("");
+  const imps = (S.cfg.importacoes||[]).map(x=>({...x, ainda: [...S.lanc.values()].filter(d=>d.imp===x.id).length})).filter(x=>x.ainda>0).slice(0,3);
+  const quando = t => { const d = new Date(t); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
   return `<div class="panel">
+    <div class="ext-top"><button class="btn solid" data-act="abrirImport">Atualizar com extrato ou fatura</button><span class="note">CSV ou OFX do banco. O que já estiver no app não entra de novo.</span></div>
+    ${imps.length?`<div class="imps">${imps.map(x=>`<div class="imp"><span><b>${esc(x.nome)}</b><small>${quando(x.quando)} · ${x.ainda} ${x.ainda>1?"lançamentos":"lançamento"}</small></span><button class="btn" data-act="desfazerImp:${x.id}">Desfazer importação</button></div>`).join("")}</div>`:""}
     <div class="filters">
       <input class="search" id="busca" type="search" placeholder="Buscar (posto, ifood, 52,90…)" value="${esc(E.busca)}">
       <select class="sel" id="fCat" aria-label="Categoria">${catOpts}</select>
@@ -1566,8 +1615,8 @@ function viewExtrato(){
       ${byDay[day].map(d=>{ if (d._grupo) return grupoFatura(d);
         const cls = d.tipo==="receita"?"in":(d.tipo==="aporte"||d.tipo==="resgate")?"sv":""; const sinal = d.tipo==="ajuste" ? (d.valor>=0?"+":"−") : d.tipo==="receita"?"+":(d.tipo==="gasto"?"−":(d.tipo==="aporte"?"→":d.tipo==="pagfatura"?"✓":"←"));
         const lab = d.tipo==="ajuste" ? "Ajuste manual de saldo (toque para tirar)" : d.tipo==="pagfatura" ? `Pagamento da fatura de ${mesAb(d.fatura)} (não entra no orçamento)` : d.tipo==="gasto" ? (itemDe(d) || (modoFatura() && !(d.cartao && d.mes===d.fatura) ? "Fora do plano" : catNome(d.cat))) : d.tipo==="receita" ? "Receita" : d.tipo==="aporte" ? "Guardado em "+((S.cfg.metas.find(x=>x.id===d.meta)||S.cfg.metas[0]||{}).nome||"meta") : "Resgate";
-        return `<button class="tx" ${d.tipo==="ajuste"?`data-act="limparAjuste:${d.mes}"`:`data-edit="${d.id}"`}><span class="d">${esc(d.desc)}</span><span class="val num ${cls}">${sinal} ${fm(Math.abs(d.valor))}</span>
-          <span class="m">${d.tipo==="gasto"?`<span class="dot" style="--cc:${corCat(d.cat)}"></span>`:""}${esc(lab)}${d.parc?` · parcela ${d.parc}`:""}${d.fixo?" · fixa":""}${d.cartao?` · cartão, fatura de ${mesAb(d.fatura)}${d.pagoEm?(d.aPagar?` · adiantar em ${mesAb(d.pagoEm)}`:` · paga antes, em ${mesAb(d.pagoEm)}`):d.mes!==mesDe(d.data)?` (conta em ${mesAb(d.mes)})`:""}`:""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span>${d.divide?`<span class="m"><span class="pill ${d.divide.recebido?"g":"y"}" style="font-size:11.5px">${esc(d.divide.quem)} ${d.divide.recebido?"pagou":"vai pagar"} ${fm(d.divide.valor)} · total ${fm(d.valorTotal)}</span></span>`:""}${d.nota?`<span class="m nota">“${esc(d.nota)}”</span>`:""}</button>`; }).join("")}</div>`).join("")
+        return `<div class="txw"><button class="tx-del" data-act="apagarRapido:${d.id}" aria-label="Deslançar ${esc(d.desc)}" title="Deslançar">✕</button><button class="tx" ${d.tipo==="ajuste"?`data-act="limparAjuste:${d.mes}"`:`data-edit="${d.id}"`}><span class="d">${esc(d.desc)}</span><span class="val num ${cls}">${sinal} ${fm(Math.abs(d.valor))}</span>
+          <span class="m">${d.tipo==="gasto"?`<span class="dot" style="--cc:${corCat(d.cat)}"></span>`:""}${esc(lab)}${d.parc?` · parcela ${d.parc}`:""}${d.fixo?" · fixa":""}${d.cartao?` · cartão, fatura de ${mesAb(d.fatura)}${d.pagoEm?(d.aPagar?` · adiantar em ${mesAb(d.pagoEm)}`:` · paga antes, em ${mesAb(d.pagoEm)}`):d.mes!==mesDe(d.data)?` (conta em ${mesAb(d.mes)})`:""}`:""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span>${d.divide?`<span class="m"><span class="pill ${d.divide.recebido?"g":"y"}" style="font-size:11.5px">${esc(d.divide.quem)} ${d.divide.recebido?"pagou":"vai pagar"} ${fm(d.divide.valor)} · total ${fm(d.valorTotal)}</span></span>`:""}${d.nota?`<span class="m nota">“${esc(d.nota)}”</span>`:""}</button></div>`; }).join("")}</div>`).join("")
       : `<div class="empty"><b>Nada por aqui</b>${E.busca||E.cat||E.tipo!=="todos"?"Nenhum lançamento com esses filtros.":"Lance o primeiro gasto na barra lá em cima: “50 gasolina”."}</div>`}
   </div>`;
 }
@@ -1667,6 +1716,9 @@ function viewAjustes(){
   const catSel = (v,id) => `<select data-cfg="${id}" aria-label="Categoria">${C.cats.map(c=>`<option value="${c.id}" ${v===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select>`;
   const regras = Object.entries(C.regras||{});
   return `<div class="grid two"><div class="col">
+    ${/github\.io$/.test(location.hostname) || S.modo==="firebase" ? `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--tang)">App no celular</h2></div>
+      ${ehApp() ? `<p class="note">Você já está usando a Caderneta instalada como app.</p>` : `<p class="note">Instala a Caderneta como aplicativo: abre em tela cheia, direto do ícone.</p><div class="btns"><button class="btn green" data-act="instalarApp">Instalar app</button></div>
+      <p class="note">Já instalou e não achou? No Android o ícone também vai para a lista de todos os apps (arraste a tela inicial para cima) com o nome <b>Caderneta</b>. Se não estiver lá: Chrome → menu ⋮ → <b>Instalar app</b> (ou “Adicionar à tela inicial” → Instalar).</p>`}</section>` : ""}
     <section class="panel"><div class="panel-h"><h2 style="--hc:var(--mint)">Salários e receitas fixas</h2></div>
       <div class="form-rows">${(C.receitas||[]).length?`<div class="frow rc fhead"><span>Nome</span><span style="text-align:right">Valor</span><span>Dia</span><span></span></div>`:""}
       ${(C.receitas||[]).map((r,i)=>`<div class="frow rc"><input data-cfg="receitas.${i}.nome" value="${esc(r.nome)}" aria-label="Nome"><input class="n" data-cfg="receitas.${i}.valor" data-num value="${r.valor?BRL.format(r.valor):""}" inputmode="decimal" placeholder="0,00" aria-label="Valor"><input class="n" data-cfg="receitas.${i}.dia" data-int value="${r.dia||""}" inputmode="numeric" aria-label="Dia"><button class="x" data-act="del:receitas:${i}" aria-label="Remover">✕</button></div>`).join("")}</div>
@@ -1720,8 +1772,6 @@ function viewAjustes(){
         : `<p class="note">No celular, o login com Google pode falhar. Crie uma senha para esta mesma conta e entre com e-mail no celular, com os mesmos dados.</p>
         <div class="inl" style="margin-top:8px;flex-wrap:wrap"><input id="novaSenha" type="password" autocomplete="new-password" placeholder="Nova senha (mín. 6)" style="width:200px;font-family:var(--f-ui)"><button data-act="criarSenha">Criar senha</button></div>`}
       </section>`; })() : ""}
-    ${S.modo==="firebase" || /github\.io$/.test(location.hostname) ? `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--tang)">App no celular</h2></div>
-      ${ehApp() ? `<p class="note">Você já está usando a Caderneta instalada como app.</p>` : `<p class="note">Instale para abrir a Caderneta direto da tela inicial, em tela cheia, como um aplicativo.</p><div class="btns"><button class="btn green" data-act="instalarApp">Instalar na tela inicial</button></div>`}</section>` : ""}
     <section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">Cartão de crédito</h2></div>
       <div class="form-rows">
         <div class="frow" style="grid-template-columns:1fr 130px"><span>Nome</span><input data-cfg="cartao.nome" value="${esc(C.cartao?.nome||"Cartão")}"></div>
@@ -2053,8 +2103,8 @@ function resumoLote(){
 }
 
 function folhaColar(){
-  abrirFolha(`<h3>Importar</h3><p class="lead">Escolha o CSV do Nubank (conta ou fatura) ou cole aqui notificações, linhas de extrato, o que tiver.</p>
-    <div class="btns" style="margin:0 0 12px"><button class="btn solid" data-act="escolherCsv">Escolher arquivo CSV</button></div>
+  abrirFolha(`<h3>Importar</h3><p class="lead">Escolha o extrato da conta ou a fatura (CSV ou OFX, do Nubank ou de outro banco) ou cole aqui notificações e linhas de extrato. O que já estiver no app é reconhecido e não entra de novo.</p>
+    <div class="btns" style="margin:0 0 12px"><button class="btn solid" data-act="escolherCsv">Escolher arquivo (CSV ou OFX)</button></div>
     <textarea class="paste" id="pasteIn" placeholder="Compra de R$ 52,90 APROVADA em POSTO IPIRANGA…&#10;Você recebeu uma transferência de R$ 300,00 de Fulano&#10;mercado 230 ontem"></textarea>
     <div class="sheet-foot"><button type="button" class="btn" data-close>Cancelar</button>${S.ai?`<button class="btn" data-act="colarIA">Ler com IA</button>`:""}<button class="btn green" data-act="colarLer">Ler</button></div>`);
 }
@@ -2070,6 +2120,19 @@ function csvRows(text){
   return rows.filter(r=>r.some(x=>x.trim()));
 }
 function dataBR(s){ s=String(s).trim(); let m; if ((m=s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return m[0]; if ((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))) return (m[3].length===2?"20"+m[3]:m[3])+"-"+pad(m[2])+"-"+pad(m[1]); return null; }
+function importarOFX(text){
+  const out = []; const blocos = String(text).split(/<STMTTRN>/i).slice(1);
+  const tag = (b, t) => { const m = b.match(new RegExp("<"+t+">([^<\\r\\n]*)","i")); return m ? m[1].trim() : ""; };
+  for (const b of blocos){ const v = parseFloat(tag(b,"TRNAMT").replace(",", ".")); const dt = tag(b,"DTPOSTED"); if (!isFinite(v) || v===0 || dt.length<8) continue;
+    const data = `${dt.slice(0,4)}-${dt.slice(4,6)}-${dt.slice(6,8)}`; const raw = tag(b,"MEMO") || tag(b,"NAME") || "Lançamento";
+    let desc = titulo(raw.replace(/^(compra no d[eé]bito|transfer[eê]ncia (enviada|recebida)( pelo pix)?|pagamento de boleto efetuado|pix (enviado|recebido))\s*[-:]?\s*/i,"").replace(/\*/g," ")).slice(0,60) || "Lançamento";
+    let tipo = v<0 ? "gasto" : "receita"; const n = norm(raw);
+    if (/pagamento de fatura|pagamento fatura/.test(n)){ tipo = "pagfatura"; desc = "Pagamento da fatura"; }
+    else if (/aplicacao|resgate rdb|caixinha|transferencia entre contas|dinheiro guardado|dinheiro resgatado/.test(n)) tipo = "interno";
+    if (/pix/.test(n) && tipo==="gasto") desc = "Pix · " + desc;
+    out.push({data, desc, valor:Math.abs(v), tipo, cat: tipo==="gasto"?categorizar(desc):(tipo==="receita"?"__rec":null)}); }
+  return out.length ? out : null;
+}
 function importarCSV(text){
   const rows = csvRows(text); if (rows.length<2) return null;
   const h = rows[0].map(x=>norm(x).trim());
@@ -2294,9 +2357,16 @@ async function acao(a, el){
     case "instalarApp": { $("#convApp")?.remove(); if (pedidoInstalar){ pedidoInstalar.prompt(); const r = await pedidoInstalar.userChoice.catch(()=>({})); lsSet("caderneta-instalar", r.outcome==="accepted" ? "feito" : "nao"); pedidoInstalar = null; }
       else toast(/iphone|ipad/i.test(navigator.userAgent) ? "No Safari: toque em Compartilhar e depois em “Adicionar à Tela de Início”." : "No Chrome: toque no menu ⋮ e depois em “Instalar app” ou “Adicionar à tela inicial”.", null, 8000); render(); return; }
     case "naoInstalar": $("#convApp")?.remove(); lsSet("caderneta-instalar","nao"); toast("Combinado, não pergunto mais. Se mudar de ideia, está em Ajustes."); return;
+    case "apagarRapido": { const d = S.lanc.get(arg); if (!d) return; await apagarLanc(arg);
+      toast(`Deslançado: ${d.desc} ${fm(d.valor)}`, async()=>{ await gravarLanc(arg, d); toast("Voltou"); }, 7000); return; }
+    case "desfazerImp": { if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="Toque de novo para desfazer"; setTimeout(()=>{ if (el.isConnected){ el.dataset.sure=""; el.textContent="Desfazer importação"; } }, 3000); return; }
+      const ls = [...S.lanc.entries()].filter(([,d])=>d.imp===arg); for (const [id] of ls) await apagarLanc(id);
+      toast(`${ls.length} lançamentos da importação removidos`, async()=>{ for (const [id,d] of ls) await gravarLanc(id, d); toast("Voltaram"); }, 9000); return; }
+    case "revisadoOk": ((S.cfg.revisado ||= {})[arg] = true); salvarCfg(true); render(); toast("Plano do mês confirmado."); return;
     case "verItem": memo.get("itemAberto")===arg ? memo.delete("itemAberto") : memo.set("itemAberto", arg); render(); return;
-    case "planVal": memo.set("fxPlan", arg); render(); setTimeout(()=>{ const i=$("#planVal"); i?.focus(); i?.select(); },0); return;
-    case "confirmaPlanVal": { const v = parseValor($("#planVal")?.value||""); memo.delete("fxPlan"); ((S.cfg.planos ||= {})[m] ||= {})[arg] = v>0 ? v : 0; salvarCfg(true); render(); return; }
+    case "planVal": memo.delete("fxPlan2"); memo.set("fxPlan", arg); render(); setTimeout(()=>{ const i=$("#planVal"); i?.focus(); i?.select(); },0); return;
+    case "planVal2": memo.set("fxPlan2", arg); memo.delete("fxPlan"); render(); setTimeout(()=>{ const i=$("#planVal2"); i?.focus(); i?.select(); },0); return;
+    case "confirmaPlanVal": { const v = parseValor(($("#planVal2")||$("#planVal"))?.value||""); memo.delete("fxPlan"); memo.delete("fxPlan2"); ((S.cfg.planos ||= {})[m] ||= {})[arg] = v>0 ? v : 0; salvarCfg(true); render(); return; }
     case "editarGuardar": memo.set("fxGuardar", arg); render(); setTimeout(()=>{ const i=$("#guardVal"); i?.focus(); i?.select(); },0); return;
     case "confirmaGuardar": { const txt = ($("#guardVal")?.value||"").trim(); memo.delete("fxGuardar"); ((S.cfg.planos ||= {})[arg] ||= {}); if (!txt) delete S.cfg.planos[arg].__guardar; else S.cfg.planos[arg].__guardar = parseValor(txt)||0; salvarCfg(true); render(); return; }
     case "guardarPlano": { const mt = S.cfg.metas[0]; if (!mt) return; const r = resumo(arg); const v = r2(r.metaMensal - r.guardado);
@@ -2307,7 +2377,7 @@ async function acao(a, el){
     case "confirmaGuardarAgora": { const mt = S.cfg.metas[0]; const v = parseValor($("#guardAgora")?.value||""); memo.delete("guardarAgora"); if (!mt || !(v>0)){ render(); return; }
       const ids = await lancarParsed({tipo:"aporte", valor:v, desc:mt.nome, meta:mt.id, data: arg===mesDe(hoje()) ? hoje() : dataNoMes(arg, 10), origem:"checklist"});
       toast(`${fm(v)} guardados em ${mt.nome}`, async()=>{ for (const id of ids) await apagarLanc(id); toast("Desfeito"); }); return; }
-    case "baseAgora": { S.cfg.baseV2 = false; S.baseTentada = false; await tentarBase(true); render(); return; }
+    case "baseAgora": { S.cfg.planoV3 = false; S.montandoPlano = false; await garantirPlano(); render(); return; }
     case "planCopiarPlanejados": { const mm = memo.get("planMes"), ant = addMes(mm,-1); const ja = new Set(itensDoMes(mm).map(f=>norm(f.nome))); let n = 0;
       for (const f of (S.cfg.fixos||[]).filter(f=>f.soMes===ant)){ if (ja.has(norm(f.nome))) continue; const id = "f"+uid(); const v = previsto(f, ant); S.cfg.fixos.push(Object.assign({}, f, {id, soMes:mm, valor:v})); ((S.cfg.planos ||= {})[mm] ||= {})[id] = v; n++; }
       salvarCfg(true); folhaPlanejar(mm); toast(n ? `Copiei ${n} ${n>1?"planejados":"planejado"} de ${MES[+ant.slice(5)-1]}.` : "Nada novo para copiar."); return; }
@@ -2402,7 +2472,8 @@ async function acao(a, el){
         if (r.nota && !d.nota) nd.nota = r.nota;
         if (+r.parte>0 && !d.divide){ const tot = totalDe(d), pt = Math.min(+r.parte, tot); nd.valorTotal = tot; nd.valor = r2(tot-pt); nd.divide = {quem:r.quem||"Alguém", valor:r2(pt), recebido:false}; }
         await gravarLanc(r._dupId, nd); ligados++; }
-      let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:(r.tipo==="aporte"||r.tipo==="resgate")?(r.meta||S.cfg.metas[0]?.id):null, rec:r.tipo==="receita"?r.rec:null, data:r.data, parcelas:r.parcelas||1, cartao:!!r.cartao, fatura:r.fatura||null, parcInfo:r.parcInfo||null, pagoEm: (r.cartao && r.pago) ? mesPago(r) : null, aPagar: ehAPagar(r), naFatura: !!(r.cartao && r.tipo==="gasto" && !r.pago && modoFatura()), nota:r.nota||null, divide: +r.parte>0 ? {quem:r.quem, valor:+r.parte} : null, origem:"importado"})); }
+      const imp = "i"+uid(); ((S.cfg.importacoes ||= []).unshift({id:imp, quando:Date.now(), n:rows.length, nome:String(memo.get("loteTitulo")||"Importação").slice(0,60)})); S.cfg.importacoes = S.cfg.importacoes.slice(0,8); salvarCfg();
+      let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({imp,tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:(r.tipo==="aporte"||r.tipo==="resgate")?(r.meta||S.cfg.metas[0]?.id):null, rec:r.tipo==="receita"?r.rec:null, data:r.data, parcelas:r.parcelas||1, cartao:!!r.cartao, fatura:r.fatura||null, parcInfo:r.parcInfo||null, pagoEm: (r.cartao && r.pago) ? mesPago(r) : null, aPagar: ehAPagar(r), naFatura: !!(r.cartao && r.tipo==="gasto" && !r.pago && modoFatura()), nota:r.nota||null, divide: +r.parte>0 ? {quem:r.quem, valor:+r.parte} : null, origem:"importado"})); }
       toast(`${rows.length} lançamentos adicionados${ligados?` · ${ligados} já existentes ligados à fatura`:""}`, async()=>{ for (const id of all) await apagarLanc(id); toast("Desfeito"); }); return; }
     case "abrirImport": folhaColar(); return;
     case "estado": { const [i, v] = arg.split(":"); const rows = memo.get("lote"); const r = rows[+i]; if (!r) return;
@@ -2524,7 +2595,7 @@ $("#fileBtn").onclick = folhaColar;
 $("#shotBtn").onclick = ()=>{ if (!S.ai){ toast(S.modo==="firebase" ? "Entre com sua conta Google para ler prints." : "A leitura de prints só funciona com o app aberto no Claude."); return; } $("#shotIn").click(); };
 $("#shotIn").onchange = e=>{ const fs = [...e.target.files]; e.target.value=""; if (fs.length) iaExtrair(null, fs.slice(0,5)); };
 $("#fileIn").onchange = async e=>{ const f = e.target.files[0]; e.target.value=""; if (!f) return; const txt = await f.text(); fecharFolha();
-  const rows = importarCSV(txt); if (rows && rows.length) folhaLote(rows, `${rows.length} lançamentos de ${f.name}`); else if (S.ai) iaExtrair(txt); else toast("Não reconheci esse arquivo."); };
+  const rows = /<OFX|<STMTTRN/i.test(txt) ? importarOFX(txt) : importarCSV(txt); if (rows && rows.length) folhaLote(rows, `${rows.length} lançamentos de ${f.name}`); else if (S.ai) iaExtrair(txt); else toast("Não reconheci esse arquivo."); };
 document.addEventListener("input", e=>{
   const t = e.target;
   if (t.id==="busca"){ S.ext.busca = t.value; render(); return; }
@@ -2613,6 +2684,7 @@ addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); pedidoInstalar 
     d.innerHTML = `<span><b>Quer a Caderneta como app?</b> Abre direto da tela inicial, sem navegador.</span><button type="button" data-act="instalarApp">Instalar</button><button type="button" class="x" data-act="naoInstalar" aria-label="Agora não">Agora não</button>`;
     document.body.appendChild(d); }, 4000); });
 addEventListener("appinstalled", ()=>{ lsSet("caderneta-instalar","feito"); $("#convApp")?.remove(); pedidoInstalar = null; toast("Pronto: a Caderneta está na sua tela inicial."); });
+document.addEventListener("keydown", e=>{ const t = e.target; if (e.key==="Enter" && t.tagName==="INPUT" && t.closest(".inl")){ const b = t.closest(".inl").querySelector("button[data-act]"); if (b){ e.preventDefault(); b.click(); } } });
 /* nova categoria direto do seletor */
 document.addEventListener("focusin", e=>{ const t = e.target; if (t.tagName==="SELECT" && t.querySelector('option[value="__nova"]')) t.dataset.prev = t.value; }, true);
 document.addEventListener("change", e=>{ const t = e.target; if (t.tagName!=="SELECT" || t.value!=="__nova") return;
@@ -2773,6 +2845,7 @@ function baseDoHistorico(){
 }
 const ENV_RE = /^(saidas?|outros|dia a dia|compras|gasolina|combustivel|mercado|ifood|delivery|lazer|feira)\b/;
 async function tentarBase(forcar){
+  if (!forcar) return garantirPlano();
   if (S.visitante || (!forcar && S.baseTentada) || !S.gotCfg || (!forcar && S.cfg.baseV2) || !Object.keys(S.hist).length) return;
   S.baseTentada = true;
   // gastos que se repetem na planilha (6 dos últimos 12 meses), com o último valor
@@ -2816,7 +2889,7 @@ function conectar(db, base){
     S.gotLanc = true; S.lancServidor = S.lancServidor || !snap.metadata.fromCache;
     render(); if (S.gotCfg && S.lancServidor) autoFixos();
   }, e=>{ S.gotLanc = true; render(); banner(S.modo==="firebase" ? "O Firebase recusou o acesso aos dados. Confira as regras do Firestore (coleção caderneta)." : "A sincronização caiu. Recarregue a página."); }));
-  desligar.push(histCol.onSnapshot(snap=>{ const h = {}; for (const d of snap.docs) h[d.id] = d.data(); S.hist = h; render(); tentarBase(); }, ()=>{}));
+  desligar.push(histCol.onSnapshot(snap=>{ const h = {}; for (const d of snap.docs) h[d.id] = d.data(); S.hist = h; if (!snap.metadata.fromCache) S.histPronto = true; render(); tentarBase(); }, ()=>{ S.histPronto = true; }));
 }
 async function importarBackup(txt){
   let b; try{ b = JSON.parse(txt); }catch(e){ toast("Esse arquivo não é um backup da Caderneta."); return; }
@@ -2824,10 +2897,11 @@ async function importarBackup(txt){
   if (!S.db){ toast("Entre na sua conta antes de importar."); return; }
   toast("Importando…", null, 60000);
   try{
-    S.cfg = Object.assign(clone(CFG_PADRAO), b.cfg); await cfgRef.set(clone(S.cfg));
+    const manter = (S.cfg.fixos||[]).filter(f=>f.soMes);
+    S.cfg = Object.assign(clone(CFG_PADRAO), b.cfg, {planoV3:false}); S.cfg.fixos = (S.cfg.fixos||[]).concat(manter); await cfgRef.set(clone(S.cfg));
     const L = Object.entries(b.lancamentos||{}); for (const [id,d] of L) await lancCol.doc(id).set(d);
     const H = Object.entries(b.historico||{}); for (const [id,d] of H) await histCol.doc(id).set(d);
-    toast(`Backup importado: ${L.length} lançamentos e ${H.length} meses de histórico`); S.baseTentada = false; setTimeout(tentarBase, 1500);
+    toast(`Planilha importada: ${H.length} meses de histórico e ${L.length} lançamentos`); S.histPronto = true; setTimeout(()=>{ S.cfg.planoV3 = false; garantirPlano(); }, 2500);
   }catch(e){ toast("A importação parou no meio. Tente de novo."); }
 }
 function banner(t){ $("#banner").innerHTML = `<div class="banner">${esc(t)}</div>`; }
