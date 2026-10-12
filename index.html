@@ -431,6 +431,27 @@ main{max-width:1120px;margin:18px auto 0}
 .fatbox label{font-weight:600;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .fatbox select{border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--surface)}
 .contaem{text-align:center}
+.batch tr.extra td{border-top:0;padding-top:0}
+.extra-in{display:grid;grid-template-columns:1.4fr 1fr 110px;gap:6px}
+.mais{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:30px;height:30px;font-weight:700;color:var(--muted)}
+.mais.on{background:var(--blue-soft);color:var(--blue);border-color:transparent}
+.jaexiste{font-size:11.5px;color:color-mix(in srgb,var(--amber) 70%,var(--ink));margin-top:3px}
+.batch tr.dup td{opacity:1} .batch tr.dup input,.batch tr.dup select{opacity:.6}
+.divbox{background:var(--sunk);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.fgrid textarea{border:1.5px solid var(--line);border-radius:var(--r-sm);padding:9px 10px;background:var(--surface);font:inherit;color:var(--ink);resize:vertical}
+.tx .nota{font-style:italic}
+.an-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+.an-kpis div{background:var(--sunk);border-radius:10px;padding:10px 12px}
+.an-kpis dt{font-size:12px;color:var(--muted);font-weight:600}
+.an-kpis dd{margin:2px 0 0;font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.an-kpis small{font-size:11.5px;color:var(--muted)}
+.an-sec{border-top:1px solid var(--line);padding:12px 0}
+.an-sec h4{margin:0 0 8px;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.an-linha{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:4px 0}
+.an-linha b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.dica{display:grid;gap:2px;background:var(--mint-soft);border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13.5px}
+.dica.warn{background:var(--amber-soft)}
+.dica span{color:var(--muted)}
 .sheet:has(.batch){max-width:900px}
 .batch input[type=text]:not(.n){min-width:170px}
 .batch-wrap table{min-width:760px}
@@ -664,6 +685,7 @@ function parseLinha(raw){
   }
   if (!(valor>0)) return null;
   t = t.replace(/^\s*(e|mais|tamb[eé]m|depois|a[ií])\s+/i," ");
+  const ehPagFatura = /\b(adiantei|antecipei|paguei|pagamento)\b/i.test(norm(t)) && /\b(fatura|cart[aã]o)\b/i.test(t) && !/\bno cart[aã]o\b/i.test(t);
   let cartao = false;
   t = t.replace(/\b(no|na|pelo|pela|com o|com a)?\s*(cart[aã]o( de cr[eé]dito)?|cr[eé]dito|fatura)\b/ig, () => { cartao = true; return " "; });
   const l = norm(t);
@@ -681,6 +703,7 @@ function parseLinha(raw){
   let meta = null, cat = null;
   if (tipo==="aporte"||tipo==="resgate"){ const m = acharMeta(desc); meta = m?.id || null; desc = desc || (m ? m.nome : "Poupança"); if (m){ const extra = desc.split(/\s+/).filter(w=>w && !norm(m.nome).includes(norm(w))).join(" "); desc = m.nome + (extra ? " · " + extra : ""); } }
   let rec = null;
+  if (ehPagFatura){ return finalizar({tipo:"pagfatura", valor:r2(valor), desc:"Pagamento da fatura", cat:null, data, parcelas:1, explicito:true, fatura: faturaDe(data), origem:"rapido"}); }
   if (tipo==="receita"){ cat = "__rec";
     if (fonteRec){ rec = fonteRec.id; desc = fonteRec.nome; }
     else desc = desc ? titulo(desc.replace(/^(o|a|um|uma)\s+/i,"")) : "Receita"; }
@@ -704,7 +727,7 @@ function dividirFrase(line){
   let blocos = [t];
   if (sm && temNumero(sm[1]) && temNumero(sm[2])){
     const verbo = (norm(sm[1]).match(/\b(recebi|ganhei|entrou|caiu|guardei|poupei|gastei|paguei|tirei|saquei)\b/)||[])[1] || "";
-    const brutos = sm[2].split(/\s*[,;]\s*|\s+e\s+|\s+mais\s+|(?=\s(?:r\$\s*)?\d)/i).map(x=>x.trim()).filter(Boolean);
+    const brutos = sm[2].split(/\s*;\s*|(?<!\d),\s*|,\s+|\s+e\s+|\s+mais\s+|(?=\s(?:r\$\s*)?\d)/i).map(x=>x.trim()).filter(Boolean);
     const partes = []; let pend = "";
     for (const x of brutos){ if (temNumero(x)){ partes.push((pend+" "+x).trim()); pend = ""; } else if (pend || !partes.length || /^(gastei|paguei|tirei|saquei|guardei|ganhei|recebi|comprei)\b/i.test(norm(x))) pend = (pend+" "+x).trim(); else partes[partes.length-1] += " " + x; }
     if (partes.length>=2) blocos = partes.map(x => (verbo && !/\b(recebi|ganhei|guardei|gastei|paguei|tirei|saquei)\b/i.test(norm(x)) ? verbo+" " : "") + x);
@@ -713,7 +736,7 @@ function dividirFrase(line){
   // separa por vírgula, ponto e vírgula, " e ", "mais", "depois", "também"
   const out = [];
   for (const b of blocos){
-    const pedacos = b.split(/\s*[;]\s*|\s*,\s*(?=\D*\d)|\s+e\s+(?=[^\d]*\d)|\s+mais\s+(?=[^\d]*\d)|\s+depois\s+|\s+tamb[eé]m\s+|\.\s+/i).map(x=>x.trim()).filter(Boolean);
+    const pedacos = b.split(/\s*;\s*|(?<!\d)\s*,\s*(?=\D*\d)|,\s+(?=\D*\d)|\s+e\s+(?=[^\d]*\d)|\s+mais\s+(?=[^\d]*\d)|\s+depois\s+|\s+tamb[eé]m\s+|\.\s+/i).map(x=>x.trim()).filter(Boolean);
     for (const pz of pedacos){ if (temNumero(pz) || !out.length) out.push(pz); else out[out.length-1] += " " + pz; }
   }
   return out.filter(temNumero);
@@ -763,7 +786,8 @@ async function flushCfg(){
   catch(e){ toast("Não consegui salvar os ajustes. Tente de novo."); }
   finally{ cfgWriting = false; }
 }
-function hashL(d){ return d.data+"|"+Number(d.valor).toFixed(2)+"|"+keyOf(d.desc); }
+function hashL(d){ return d.data+"|"+Number(d.valorTotal||d.valor).toFixed(2)+"|"+keyOf(d.desc); }
+const totalDe = d => +(d.valorTotal || d.valor) || 0;
 
 async function lancarParsed(p, opts={}){
   const ids = [];
@@ -778,6 +802,9 @@ async function lancarParsed(p, opts={}){
     if (grupo){ doc.grupo = grupo; doc.parc = (i+1)+"/"+n; }
     else if (p.parcInfo) doc.parc = p.parcInfo;
     if (p.cartao && p.tipo==="gasto"){ doc.cartao = true; doc.fatura = addMes(p.fatura || faturaDe(p.data), i); }
+    if (p.tipo==="pagfatura"){ doc.fatura = p.fatura || faturaDe(p.data); doc.cat = null; doc.revisar = false; }
+    if (p.nota) doc.nota = String(p.nota).slice(0,300);
+    if (n===1 && p.divide && +p.divide.valor>0 && p.tipo==="gasto"){ const parte = Math.min(+p.divide.valor, doc.valor); doc.valorTotal = doc.valor; doc.valor = r2(doc.valor - parte); doc.divide = {quem: String(p.divide.quem||"Alguém").slice(0,40), valor: r2(parte), recebido: false}; }
     if (p.fixo) doc.fixo = p.fixo;
     if (p.rec) doc.rec = p.rec;
     const recLivre = p.rec && ![...S.lanc.values()].some(x=>x.rec===p.rec && x.mes===mesDe(doc.data));
@@ -935,7 +962,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 14:40";
+const VERSAO = "12/10 15:00";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1066,33 +1093,43 @@ function viewMes(){
   if (vazio && S.travou) return `<div class="grid"><div class="panel empty"><b>Seus dados não chegaram.</b>O Firebase não respondeu.${ultimoErro?`<br><small>${esc(ultimoErro.slice(0,300))}</small>`:""}<div class="btns" style="justify-content:center"><button class="btn" data-act="sair">Sair e usar sem login</button><button class="btn" onclick="location.reload()">Recarregar</button></div><p class="note">versão ${VERSAO}</p></div></div>`;
   if (vazio) return `<div class="grid"><div class="panel empty"><b>Carregando sua caderneta…</b>${S.modo==="firebase" ? "Conectando ao seu Firebase. Se passar de alguns segundos, recarregue a página." : "Se demorar, abra este link no Claude conectado à sua conta."}</div></div>`;
   const cartPanel = painelCartao(m);
-  return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${alertas}${recPanel}${fixPanel}${metas}</div></div>`;
+  return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${alertas}${recPanel}${painelReceber()}${fixPanel}${metas}</div></div>`;
 }
 const ck = () => `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m3 7.5 2.5 2.5L11 4.5"/></svg>`;
 
 function faturaInfo(venc){
   const itens = [...S.lanc.values()].filter(d=>d.cartao && d.tipo==="gasto" && d.fatura===venc);
-  const total = sum(itens,d=>d.valor);
+  const total = sum(itens, totalDe);
+  const pago = sum([...S.lanc.values()].filter(d=>d.tipo==="pagfatura" && d.fatura===venc), d=>d.valor);
   const porMes = {}; for (const d of itens) porMes[d.mes] = (porMes[d.mes]||0) + d.valor;
-  return {itens, total, porMes};
+  return {itens, total, pago, falta: Math.max(0, total - pago), porMes};
 }
 function painelCartao(m){
   const tem = [...S.lanc.values()].some(d=>d.cartao);
   const cc = S.cfg.cartao || CFG_PADRAO.cartao;
-  if (!tem) return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">Cartão ${esc(cc.nome||"")}</h2><button class="act" data-act="go:ajustes">Ajustar datas</button></div>
+  if (!tem) return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">${/^cart[aã]o$/i.test(cc.nome||"")||!cc.nome ? "Cartão" : "Cartão "+esc(cc.nome)}</h2><button class="act" data-act="go:ajustes">Ajustar datas</button></div>
     <p class="note">Mande a fatura (CSV, print ou foto), inclusive a que ainda está aberta. Comida e dia a dia passam a pesar no mês em que você comprou, mesmo vindo na fatura seguinte. Parcelas e compras maiores pesam no mês em que a fatura vence. Na barra, escreva “ifood 45 no cartão”.</p>
     <div class="btns"><button class="btn" data-act="abrirImport">Mandar fatura</button></div></section>`;
   const atual = faturaInfo(m), prox = faturaInfo(addMes(m,1));
   const desteMesNaProx = prox.porMes[m] || 0, fica = prox.total - desteMesNaProx;
   const jaContou = sum(Object.entries(atual.porMes).filter(([k])=>k!==m), ([,v])=>v), contaAgora = atual.porMes[m]||0;
-  return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">Cartão ${esc(cc.nome||"")}</h2><button class="act" data-act="cartaoExtrato">Ver compras</button></div>
+  return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">${/^cart[aã]o$/i.test(cc.nome||"")||!cc.nome ? "Cartão" : "Cartão "+esc(cc.nome)}</h2><button class="act" data-act="cartaoExtrato">Ver compras</button></div>
     <div class="cards2">
-      <div class="fat"><div class="eyebrow">Fatura que vence em ${MES[+m.slice(5)-1]}</div><div class="fat-v">${fm(atual.total)}</div>
+      <div class="fat"><div class="eyebrow">Fatura que vence em ${MES[+m.slice(5)-1]}</div><div class="fat-v">${fm(atual.total)}</div>${atual.pago?`<p class="note" style="margin:0">já pago ${fm0(atual.pago)} · falta <b>${fm0(atual.falta)}</b></p>`:""}
         <p class="note">${atual.total? `${fm0(contaAgora)} pesam neste mês${jaContou?` · ${fm0(jaContou)} já tinham pesado no mês da compra`:""}.` : "Nenhuma compra registrada nela."}</p></div>
-      <div class="fat prox"><div class="eyebrow">Próxima fatura · vence em ${MES[+addMes(m,1).slice(5)-1]}</div><div class="fat-v">${fm(prox.total)}</div>
+      <div class="fat prox"><div class="eyebrow">Próxima fatura · vence em ${MES[+addMes(m,1).slice(5)-1]}</div><div class="fat-v">${fm(prox.total)}</div>${prox.pago?`<p class="note" style="margin:0">adiantado ${fm0(prox.pago)} · falta <b>${fm0(prox.falta)}</b></p>`:""}
         <p class="note">${prox.total ? `<b>${fm0(desteMesNaProx)}</b> são gastos deste mês (comida e dia a dia), já descontados do seu “livre”. ${fm0(fica)} ficam para o mês que vem.` : "Mande a fatura aberta para ver o que já é deste mês."}</p></div>
     </div>
-    <div class="btns"><button class="btn" data-act="abrirImport">Mandar fatura</button></div></section>`;
+    <div class="btns"><button class="btn" data-act="abrirImport">Mandar fatura</button>${atual.itens.length?`<button class="btn" data-act="analisarFatura:${m}">Analisar fatura de ${MES[+m.slice(5)-1]}</button>`:""}${prox.itens.length?`<button class="btn" data-act="analisarFatura:${addMes(m,1)}">Analisar fatura de ${MES[+addMes(m,1).slice(5)-1]}</button>`:""}</div></section>`;
+}
+function painelReceber(){
+  const L = [...S.lanc.entries()].filter(([,d])=>d.divide && !d.divide.recebido);
+  if (!L.length) return "";
+  const tot = sum(L, ([,d])=>d.divide.valor);
+  return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--teal)">A receber</h2><span class="note num" style="margin:0">${fm(tot)}</span></div>
+    <div class="check">${L.sort((a,b)=>a[1].data<b[1].data?-1:1).map(([id,d])=>`<div class="crow"><button class="tick" data-act="recebi:${id}" aria-label="Marcar como recebido"></button>
+      <div class="nm">${esc(d.divide.quem)}<small>${esc(d.desc)} · ${d.data.slice(8)}/${d.data.slice(5,7)}</small></div><div class="v">${fm(d.divide.valor)}</div></div>`).join("")}</div>
+    <p class="note">Esses valores já ficaram fora do seu orçamento. Marque quando a pessoa te pagar.</p></section>`;
 }
 function viewExtrato(){
   const E = S.ext;
@@ -1101,7 +1138,7 @@ function viewExtrato(){
   if (E.tipo==="receita") L = L.filter(d=>d.tipo==="receita");
   if (E.tipo==="guardado") L = L.filter(d=>d.tipo==="aporte"||d.tipo==="resgate");
   if (E.tipo==="revisar") L = L.filter(d=>d.revisar);
-  if (E.tipo==="cartao") L = L.filter(d=>d.cartao);
+  if (E.tipo==="cartao") L = L.filter(d=>d.cartao || d.tipo==="pagfatura");
   if (E.cat) L = L.filter(d=>d.cat===E.cat);
   if (E.busca){ const b = norm(E.busca); L = L.filter(d=>norm(d.desc).includes(b) || norm(catNome(d.cat)).includes(b) || String(d.valor).includes(b)); }
   L.sort((a,b)=> a.data===b.data ? (b.criado||0)-(a.criado||0) : (a.data<b.data?1:-1));
@@ -1118,10 +1155,10 @@ function viewExtrato(){
     <div class="filters">${chip("todos","Tudo")}${chip("gasto","Gastos")}${chip("receita","Receitas")}${chip("guardado","Guardado")}${chip("cartao","Cartão")}${chip("revisar","Para revisar")}</div>
     <div class="tot-line"><span>${L.length} ${L.length===1?"lançamento":"lançamentos"}</span><span class="num">saídas ${fm(tot)} · entradas ${fm(totIn)}</span></div>
     ${L.length ? Object.keys(byDay).map(day=>`<div class="day"><div class="day-h"><span>${esc(diaSemana(day))}</span><span class="num">${fm(sum(byDay[day].filter(d=>d.tipo==="gasto"),d=>d.valor))}</span></div>
-      ${byDay[day].map(d=>{ const cls = d.tipo==="receita"?"in":(d.tipo==="aporte"||d.tipo==="resgate")?"sv":""; const sinal = d.tipo==="receita"?"+":(d.tipo==="gasto"?"−":(d.tipo==="aporte"?"→":"←"));
-        const lab = d.tipo==="gasto" ? catNome(d.cat) : d.tipo==="receita" ? "Receita" : d.tipo==="aporte" ? "Guardado em "+((S.cfg.metas.find(x=>x.id===d.meta)||S.cfg.metas[0]||{}).nome||"meta") : "Resgate";
+      ${byDay[day].map(d=>{ const cls = d.tipo==="receita"?"in":(d.tipo==="aporte"||d.tipo==="resgate")?"sv":""; const sinal = d.tipo==="receita"?"+":(d.tipo==="gasto"?"−":(d.tipo==="aporte"?"→":d.tipo==="pagfatura"?"✓":"←"));
+        const lab = d.tipo==="pagfatura" ? `Pagamento da fatura de ${mesAb(d.fatura)} (não entra no orçamento)` : d.tipo==="gasto" ? catNome(d.cat) : d.tipo==="receita" ? "Receita" : d.tipo==="aporte" ? "Guardado em "+((S.cfg.metas.find(x=>x.id===d.meta)||S.cfg.metas[0]||{}).nome||"meta") : "Resgate";
         return `<button class="tx" data-edit="${d.id}"><span class="d">${esc(d.desc)}</span><span class="val num ${cls}">${sinal} ${fm(d.valor)}</span>
-          <span class="m">${d.tipo==="gasto"?`<span class="dot" style="--cc:${corCat(d.cat)}"></span>`:""}${esc(lab)}${d.parc?` · parcela ${d.parc}`:""}${d.fixo?" · fixa":""}${d.cartao?` · cartão, fatura de ${mesAb(d.fatura)}${d.mes!==mesDe(d.data)?` (conta em ${mesAb(d.mes)})`:""}`:""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span></button>`; }).join("")}</div>`).join("")
+          <span class="m">${d.tipo==="gasto"?`<span class="dot" style="--cc:${corCat(d.cat)}"></span>`:""}${esc(lab)}${d.parc?` · parcela ${d.parc}`:""}${d.fixo?" · fixa":""}${d.cartao?` · cartão, fatura de ${mesAb(d.fatura)}${d.mes!==mesDe(d.data)?` (conta em ${mesAb(d.mes)})`:""}`:""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span>${d.divide?`<span class="m"><span class="pill ${d.divide.recebido?"g":"y"}" style="font-size:11.5px">${esc(d.divide.quem)} ${d.divide.recebido?"pagou":"vai pagar"} ${fm(d.divide.valor)} · total ${fm(d.valorTotal)}</span></span>`:""}${d.nota?`<span class="m nota">“${esc(d.nota)}”</span>`:""}</button>`; }).join("")}</div>`).join("")
       : `<div class="empty"><b>Nada por aqui</b>${E.busca||E.cat||E.tipo!=="todos"?"Nenhum lançamento com esses filtros.":"Lance o primeiro gasto na barra lá em cima: “50 gasolina”."}</div>`}
   </div>`;
 }
@@ -1303,13 +1340,18 @@ function folhaEditar(id){
   abrirFolha(`<h3>Editar lançamento</h3><p class="lead">${d.origem==="claude"?"Lançado pelo Claude no chat · ":""}${d.parc?"Parcela "+d.parc:""}</p>
     <form id="editF" data-id="${id}"><div class="fgrid">
       <label class="full">Descrição<input name="desc" value="${esc(d.desc)}"></label>
-      <label>Valor<input name="valor" inputmode="decimal" value="${BRL.format(d.valor)}"></label>
+      <label>Valor${d.divide?" total":""}<input name="valor" inputmode="decimal" value="${BRL.format(totalDe(d))}"></label>
       <label>Data<input name="data" type="date" value="${d.data}"></label>
-      <label>Tipo<select name="tipo">${[["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["resgate","Resgatei"]].map(([v,n])=>`<option value="${v}" ${d.tipo===v?"selected":""}>${n}</option>`).join("")}</select></label>
+      <label>Tipo<select name="tipo">${[["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["resgate","Resgatei"],["pagfatura","Pagamento de fatura"]].map(([v,n])=>`<option value="${v}" ${d.tipo===v?"selected":""}>${n}</option>`).join("")}</select></label>
       <label>Categoria<select name="cat"><option value="">Sem categoria</option>${S.cfg.cats.map(c=>`<option value="${c.id}" ${d.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select></label>
       ${metasOpts?`<label class="full">Meta (se for guardado)<select name="meta">${metasOpts}</select></label>`:""}
       <label><span><input type="checkbox" name="cartao" ${d.cartao?"checked":""}> No cartão de crédito</span></label>
       <label>Fatura que vence em<select name="fatura">${[-2,-1,0,1,2,3].map(k=>addMes(mesDe(d.data),k)).map(m=>`<option value="${m}" ${(d.fatura||faturaDe(d.data))===m?"selected":""}>${mesLongo(m)}</option>`).join("")}</select></label>
+      <div class="full divbox"><b>Alguém vai te pagar uma parte?</b>
+        <div class="fgrid" style="margin-top:6px"><label>Quem<input name="quem" value="${esc(d.divide?.quem||"")}" placeholder="Ex.: Ana"></label><label>Quanto<input name="parte" inputmode="decimal" value="${d.divide?BRL.format(d.divide.valor):""}" placeholder="0,00"></label></div>
+        ${d.divide?`<label style="margin-top:6px"><span><input type="checkbox" name="recebido" ${d.divide.recebido?"checked":""}> Já me pagou</span></label>`:""}
+        <p class="note" style="margin:6px 0 0">Só a sua parte entra no orçamento. O resto aparece em “A receber”.</p></div>
+      <label class="full">Comentário<textarea name="nota" rows="2" placeholder="Ex.: jantar de aniversário, dividido com a Ana">${esc(d.nota||"")}</textarea></label>
     </div>
     <label class="note" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" name="aprender" checked> Lembrar esta categoria para “${esc(keyOf(d.desc)||d.desc)}”</label>
     <div class="sheet-foot">
@@ -1321,32 +1363,127 @@ function folhaEditar(id){
     </div></form>`);
 }
 
-function folhaLote(rows, titulo, nota, venc){
-  const existentes = new Set([...S.lanc.values()].map(d=>d.h));
-  rows.forEach(r=>{ r._dup = existentes.has(hashL(r)); r._on = !r._dup && r.tipo!=="interno"; });
-  const temCartao = rows.some(r=>r.cartao);
+function acharDuplicado(r){
+  if (r.tipo!=="gasto" && r.tipo!=="pagfatura") return null;
+  const h = hashL(r), t = new Date(r.data+"T12:00:00").getTime();
+  for (const [id,d] of S.lanc){
+    if (d.tipo!==r.tipo) continue;
+    if (d.h===h) return id;
+    if (Math.abs(totalDe(d) - (+r.valor||0)) > 0.01) continue;
+    const dt = Math.abs(new Date(d.data+"T12:00:00").getTime() - t) / 864e5;
+    if (dt <= 3) return id;
+  }
+  return null;
+}
+function folhaLote(rows, titulo, nota, venc, manter){
+  if (!manter){
+    const usados = new Set();
+    rows.forEach(r=>{ const id = acharDuplicado(r); if (id && !usados.has(id)){ usados.add(id); r._dupId = id; r._on = false; } else { r._dupId = null; r._on = r.tipo!=="interno"; } });
+  }
+  const temCartao = rows.some(r=>r.cartao || r.tipo==="pagfatura");
   if (temCartao){
     if (!venc){ const cont = {}; rows.filter(r=>r.cartao).forEach(r=>{ const f = faturaDe(r.data); cont[f]=(cont[f]||0)+1; }); venc = Object.entries(cont).sort((a,b)=>b[1]-a[1])[0]?.[0] || addMes(mesDe(hoje()),1); }
-    rows.forEach(r=>{ if (r.cartao) r.fatura = venc; });
+    rows.forEach(r=>{ if (r.cartao || r.tipo==="pagfatura") r.fatura = venc; });
   }
-  memo.set("lote", rows); memo.set("loteVenc", venc||null);
+  memo.set("lote", rows); memo.set("loteVenc", venc||null); memo.set("loteTitulo", titulo);
   const catOpt = v => `<option value="">—</option>`+S.cfg.cats.map(c=>`<option value="${c.id}" ${v===c.id?"selected":""}>${esc(c.nome)}</option>`).join("");
   const opcoesVenc = [-2,-1,0,1,2,3].map(k=>addMes(mesDe(hoje()),k));
-  abrirFolha(`<h3>${esc(titulo)}</h3><p class="lead">${esc(nota||"Confira e ajuste o que precisar. Linhas apagadas não entram.")}</p>
+  const nDup = rows.filter(r=>r._dupId).length;
+  const tipos = [["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["resgate","Resgatei"],["pagfatura","Pagou fatura"],["interno","Ignorar"]];
+  abrirFolha(`<h3>${esc(titulo)}</h3><p class="lead">${esc(nota||"Confira e ajuste. O botão ＋ de cada linha serve para comentar ou dizer que alguém vai te pagar uma parte.")}</p>
     ${temCartao?`<div class="fatbox"><label>Fatura do cartão que vence em <select id="loteVenc">${opcoesVenc.map(m=>`<option value="${m}" ${m===venc?"selected":""}>${mesLongo(m)}</option>`).join("")}</select></label>
-      <p class="note">Comida, mercado, transporte e outros gastos do dia a dia contam no mês em que você comprou. Compras maiores e parcelas contam no mês em que a fatura vence. A coluna “Conta em” mostra onde cada uma vai pesar.</p></div>`:""}
-    <div class="batch-wrap"><table class="batch"><tbody>${rows.map((r,i)=>`<tr class="${r._dup?"dup":""}">
+      <p class="note">Comida e gastos do dia a dia contam no mês da compra. Parcelas e compras maiores contam no mês em que a fatura vence. Pagamentos e adiantamentos da fatura ficam registrados, mas não entram no orçamento.</p></div>`:""}
+    ${nDup?`<div class="fatbox" style="background:var(--amber-soft)"><b>${nDup} ${nDup>1?"compras já estavam":"compra já estava"} no app</b> (mesmo valor, até 3 dias de diferença). Não vou lançar de novo: só ligo à fatura. Se for outra compra, marque a caixinha da linha.</div>`:""}
+    <div class="batch-wrap"><table class="batch"><tbody>${rows.map((r,i)=>`<tr class="${r._dupId?"dup":""}">
       <td style="width:28px"><input type="checkbox" data-lote="${i}.on" ${r._on?"checked":""} aria-label="Incluir"></td>
       <td style="width:118px"><input type="date" data-lote="${i}.data" value="${r.data}"></td>
-      <td><input type="text" data-lote="${i}.desc" value="${esc(r.desc)}"></td>
-      <td style="width:130px"><select data-lote="${i}.tipo">${[["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["resgate","Resgatei"],["interno","Ignorar"]].map(([v,n])=>`<option value="${v}" ${r.tipo===v?"selected":""}>${n}</option>`).join("")}</select></td>
+      <td><input type="text" data-lote="${i}.desc" value="${esc(r.desc)}">${r._dupId?`<div class="jaexiste">já lançado: ${esc(S.lanc.get(r._dupId)?.desc||"")} · ${S.lanc.get(r._dupId)?.data.slice(8)}/${S.lanc.get(r._dupId)?.data.slice(5,7)}</div>`:""}</td>
+      <td style="width:130px"><select data-lote="${i}.tipo">${tipos.map(([v,n])=>`<option value="${v}" ${r.tipo===v?"selected":""}>${n}</option>`).join("")}</select></td>
       <td style="width:150px"><select data-lote="${i}.cat">${catOpt(r.cat)}</select></td>
       <td style="width:96px"><input type="text" class="n" inputmode="decimal" data-lote="${i}.valor" value="${BRL.format(r.valor)}"></td>
       ${temCartao?`<td style="width:78px" class="contaem" data-contaem="${i}">${contaEmTxt(r)}</td>`:""}
-    </tr>`).join("")}</tbody>${temCartao?`<tfoot><tr><td colspan="7" id="loteResumo" class="note"></td></tr></tfoot>`:""}</table></div>
-    ${rows.some(r=>r._dup)?`<p class="note">Linhas apagadas já existem no app e vieram desmarcadas.</p>`:""}
-    <div class="sheet-foot"><button type="button" class="btn" data-close>Cancelar</button><button class="btn green" data-act="lancarLote" id="loteBtn">Lançar ${rows.filter(r=>r._on).length}</button></div>`);
+      <td style="width:36px"><button type="button" class="mais ${(r.nota||+r.parte)?"on":""}" data-act="toggleExtra:${i}" aria-label="Comentário e divisão">＋</button></td>
+    </tr><tr class="extra" data-extra="${i}" ${(r.nota||+r.parte)?"":"hidden"}><td></td><td colspan="7"><div class="extra-in">
+      <input type="text" data-lote="${i}.nota" value="${esc(r.nota||"")}" placeholder="Comentário (opcional)">
+      <input type="text" data-lote="${i}.quem" value="${esc(r.quem||"")}" placeholder="Quem vai te pagar uma parte?">
+      <input type="text" class="n" inputmode="decimal" data-lote="${i}.parte" value="${+r.parte?BRL.format(r.parte):""}" placeholder="Quanto">
+    </div></td></tr>`).join("")}</tbody>${temCartao?`<tfoot><tr><td colspan="8" id="loteResumo" class="note"></td></tr></tfoot>`:""}</table></div>
+    <div class="sheet-foot"><button type="button" class="btn" data-close>Cancelar</button><button type="button" class="btn" data-act="analisarLote">Analisar</button><button class="btn green" data-act="lancarLote" id="loteBtn">${rotuloLote()}</button></div>`);
   if (temCartao) resumoLote();
+}
+function rotuloLote(){ const rows = memo.get("lote")||[]; const n = rows.filter(r=>r._on && r.tipo!=="interno").length, v = rows.filter(r=>!r._on && r._dupId).length; return `Lançar ${n}${v?` · ligar ${v}`:""}`; }
+
+/* ---------- análise de fatura ---------- */
+const COMIDA = ["mercado","delivery","saidas"];
+function folhaAnalise(itens, venc, doLote){
+  const G = itens.filter(x=>x.tipo==="gasto"), P = itens.filter(x=>x.tipo==="pagfatura");
+  const total = sum(G,x=>x.valor), minha = sum(G,x=>x.minha), receber = total - minha, pago = sum(P,x=>x.valor);
+  const conta = x => x.cartao ? mesEfetivo({cartao:true,tipo:"gasto",fatura:x.fatura||venc,cat:x.cat,data:x.data,parc:x.parcInfo}) : mesDe(x.data);
+  const porConta = {}; G.forEach(x=>{ const m = conta(x); porConta[m]=(porConta[m]||0)+x.minha; });
+  const porCat = {}; G.forEach(x=>{ const k = x.cat||"__sem"; porCat[k]=(porCat[k]||0)+x.minha; });
+  const cats = Object.entries(porCat).sort((a,b)=>b[1]-a[1]); const mxC = cats[0]?.[1]||1;
+  const comida = G.filter(x=>COMIDA.includes(x.cat)); const comidaT = sum(comida,x=>x.minha);
+  const deliv = G.filter(x=>x.cat==="delivery"); const delivT = sum(deliv,x=>x.minha);
+  const merc = G.filter(x=>x.cat==="mercado"); const mercT = sum(merc,x=>x.minha);
+  const said = G.filter(x=>x.cat==="saidas"); const saidT = sum(said,x=>x.minha);
+  // semanas (segunda a domingo) pela data da compra
+  const semana = d => { const t = new Date(d+"T12:00:00"); const dw = (t.getDay()+6)%7; t.setDate(t.getDate()-dw); return isoDate(t); };
+  const porSem = {}; G.forEach(x=>{ const k = semana(x.data); porSem[k]=(porSem[k]||0)+x.minha; });
+  const sems = Object.keys(porSem).sort(); const mxS = Math.max(1,...Object.values(porSem));
+  const lojas = {}; G.forEach(x=>{ const k = keyOf(x.desc)||x.desc; (lojas[k] ||= {nome:x.desc, t:0, n:0}); lojas[k].t += x.minha; lojas[k].n++; });
+  const topLojas = Object.values(lojas).sort((a,b)=>b.t-a.t).slice(0,5);
+  const maiores = G.slice().sort((a,b)=>b.minha-a.minha).slice(0,5);
+  const parcelas = G.filter(x=>x.parcInfo);
+  const pequenos = G.filter(x=>x.valor<=30); const pequenosT = sum(pequenos,x=>x.minha);
+  const assin = G.filter(x=>["streaming","jogos"].includes(x.cat)); const assinT = sum(assin,x=>x.minha);
+  const dicas = [];
+  if (deliv.length>=3) dicas.push({t:`Delivery: ${deliv.length} pedidos, ${fm0(delivT)}`, d:`Média de ${fm0(delivT/deliv.length)} por pedido. Trocar metade por comida de casa deixaria uns ${fm0(delivT*0.35)} no bolso.`});
+  if (saidT>0 && said.length>=3) dicas.push({t:`Saídas: ${fm0(saidT)} em ${said.length} vezes`, d:`Se combinar um teto por saída, dá para prever melhor. Hoje a média é ${fm0(saidT/said.length)}.`});
+  if (pequenos.length>=6) dicas.push({t:`${pequenos.length} compras pequenas somaram ${fm0(pequenosT)}`, d:`Cada uma parece pouca coisa (até R$ 30), mas juntas pesam ${Math.round(pequenosT/Math.max(1,minha)*100)}% da fatura.`});
+  if (assinT>0) dicas.push({t:`Assinaturas e jogos: ${fm0(assinT)} nesta fatura`, d:`Isso dá ${fm0(assinT*12)} por ano. Vale revisar o que você não usa há um mês.`});
+  if (topLojas[0] && topLojas[0].t > minha*0.15 && topLojas[0].n>1) dicas.push({t:`${topLojas[0].nome}: ${fm0(topLojas[0].t)} em ${topLojas[0].n} compras`, d:`É o lugar onde mais foi dinheiro nesta fatura (${Math.round(topLojas[0].t/minha*100)}%).`});
+  if (parcelas.length) dicas.push({t:`${parcelas.length} parcelas nesta fatura: ${fm0(sum(parcelas,x=>x.minha))}`, d:`Elas continuam nos próximos meses. Antes de parcelar algo novo, veja quanto já está comprometido na tela do Mês.`});
+  for (const [k,v] of cats){ const c = catById(k); if (!c || !(+c.orc)) continue; const m = Object.keys(porConta)[0]; if (v > +c.orc) dicas.push({t:`${c.nome} passou do orçamento`, d:`Só nesta fatura foram ${fm0(v)}, para um previsto de ${fm0(c.orc)} no mês.`}); }
+  memo.set("analise", {itens, venc, stats:{total, minha, receber, pago, porConta, cats, comidaT, delivT, delivN:deliv.length, mercT, saidT, sems:sems.map(k=>[k,porSem[k]]), topLojas, pequenosT, pequenosN:pequenos.length, assinT}, doLote});
+  const barra = (lbl, v, mx, cor) => `<div class="hbar" style="--cc:${cor}"><span>${esc(lbl)}</span><span class="t"><i style="width:${(v/mx*100).toFixed(1)}%"></i></span><span class="num">${fm0(v)}</span></div>`;
+  abrirFolha(`<h3>Análise da fatura${venc?` de ${mesLongo(venc)}`:""}</h3><p class="lead">${G.length} compras${P.length?` · ${P.length} pagamento(s)`:""}.</p>
+    <div class="an-kpis">
+      <div><dt>Total</dt><dd>${fm0(total)}</dd></div>
+      <div><dt>Sua parte</dt><dd>${fm0(minha)}</dd>${receber>0.5?`<small>${fm0(receber)} a receber</small>`:""}</div>
+      <div><dt>Comida</dt><dd>${fm0(comidaT)}</dd><small>${minha?Math.round(comidaT/minha*100):0}% da sua parte</small></div>
+      ${pago?`<div><dt>Já pago</dt><dd>${fm0(pago)}</dd><small>falta ${fm0(Math.max(0,total-pago))}</small></div>`:""}
+    </div>
+    <div class="an-sec"><h4>Em que mês cada parte pesa</h4>${Object.keys(porConta).sort().map(m=>`<div class="an-linha"><span>${mesLongo(m)}</span><b>${fm(porConta[m])}</b></div>`).join("")}
+      <p class="note">Comida e dia a dia pesam no mês em que você comprou; parcelas e compras maiores, no mês da fatura.</p></div>
+    <div class="an-sec"><h4>Comida</h4>
+      <div class="an-linha"><span>Mercado</span><b>${fm(mercT)}</b></div>
+      <div class="an-linha"><span>Delivery${deliv.length?` · ${deliv.length} pedidos`:""}</span><b>${fm(delivT)}</b></div>
+      <div class="an-linha"><span>Saídas (restaurante, lanche, bar)</span><b>${fm(saidT)}</b></div></div>
+    <div class="an-sec"><h4>Por categoria</h4>${cats.map(([k,v])=>barra(k==="__sem"?"Sem categoria":catNome(k), v, mxC, corCat(k==="__sem"?null:k))).join("")}</div>
+    ${sems.length>1?`<div class="an-sec"><h4>Por semana da compra</h4>${sems.map(k=>barra("semana de "+k.slice(8)+"/"+k.slice(5,7), porSem[k], mxS, "var(--blue)")).join("")}</div>`:""}
+    <div class="an-sec"><h4>Onde mais foi dinheiro</h4>${topLojas.map(l=>`<div class="an-linha"><span>${esc(l.nome)}${l.n>1?` · ${l.n}×`:""}</span><b>${fm(l.t)}</b></div>`).join("")}</div>
+    <div class="an-sec"><h4>Dá para economizar</h4>${dicas.length?dicas.map(x=>`<div class="dica"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div>`).join(""):`<p class="note">Nada fora do padrão nesta fatura.</p>`}</div>
+    ${G.some(x=>x.nota||x.divide)?`<div class="an-sec"><h4>Seus comentários</h4>${G.filter(x=>x.nota||x.divide).map(x=>`<div class="an-linha"><span>${esc(x.desc)}${x.nota?` — “${esc(x.nota)}”`:""}${x.divide?` · ${esc(x.divide.quem||"alguém")} paga ${fm0(x.divide.valor)}`:""}</span><b>${fm(x.minha)}</b></div>`).join("")}</div>`:""}
+    <div class="an-sec" id="iaBox">${S.ai?`<button type="button" class="btn" data-act="iaAnalise">Pedir uma análise mais detalhada à IA</button>`:`<p class="note">Entre na sua conta para pedir uma análise mais detalhada à IA.</p>`}</div>
+    <div class="sheet-foot">${doLote?`<button type="button" class="btn" data-act="voltarLote">Voltar</button><button type="button" class="btn green" data-act="lancarLote">Lançar</button>`:`<button type="button" class="btn" data-close>Fechar</button>`}</div>`);
+}
+async function iaAnalisar(){
+  const A = memo.get("analise"); if (!A || !S.ai) return; const box = $("#iaBox"); if (box) box.innerHTML = `<p class="note">Analisando…</p>`;
+  const lista = A.itens.filter(x=>x.tipo==="gasto").map(x=>`${x.data} | ${x.desc} | ${catNome(x.cat)} | ${x.minha.toFixed(2)}${x.parcInfo?" | parcela "+x.parcInfo:""}${x.nota?" | nota: "+x.nota:""}`).join("\n").slice(0,40000);
+  const orc = S.cfg.cats.filter(c=>+c.orc).map(c=>`${c.nome}: ${c.orc}`).join("; ");
+  const prompt = `Você é um consultor de finanças pessoais brasileiro, direto e prático. Analise esta fatura de cartão de crédito.
+Orçamento mensal da pessoa por categoria: ${orc||"não definido"}.
+Resumo calculado: total ${A.stats.total.toFixed(2)}, parte da pessoa ${A.stats.minha.toFixed(2)}, comida ${A.stats.comidaT.toFixed(2)} (delivery ${A.stats.delivT.toFixed(2)} em ${A.stats.delivN} pedidos), assinaturas ${A.stats.assinT.toFixed(2)}.
+Compras (data | descrição | categoria | valor da parte da pessoa):
+${lista}
+Responda só com JSON: {"resumo":"2 ou 3 frases sobre o perfil de gastos desta fatura","economizar":[{"titulo":"curto","valor":número estimado de economia por mês,"como":"ação concreta"}],"atencao":["itens estranhos, possíveis cobranças duplicadas, assinaturas esquecidas, compras fora do padrão"],"comida":"1 frase sobre o gasto com comida"}. No máximo 4 itens em economizar e 4 em atencao. Valores em reais.`;
+  try{
+    const r = await S.ai.json(prompt);
+    if (!$("#iaBox")) return;
+    $("#iaBox").innerHTML = `<h4>Análise da IA</h4>${r.resumo?`<p>${esc(r.resumo)}</p>`:""}${r.comida?`<p class="note">${esc(r.comida)}</p>`:""}
+      ${(r.economizar||[]).map(x=>`<div class="dica"><b>${esc(x.titulo||"")}${+x.valor?` · ~${fm0(+x.valor)}/mês`:""}</b><span>${esc(x.como||"")}</span></div>`).join("")}
+      ${(r.atencao||[]).length?`<h4 style="margin-top:10px">Atenção</h4>${r.atencao.map(a=>`<div class="dica warn"><span>${esc(a)}</span></div>`).join("")}`:""}`;
+  }catch(e){ if ($("#iaBox")) $("#iaBox").innerHTML = `<p class="note">${esc(S.ai.erro(e)||"Não consegui analisar agora. Tente de novo.")}</p><button type="button" class="btn" data-act="iaAnalise">Tentar de novo</button>`; }
 }
 function contaEmTxt(r){ if (!r.cartao || r.tipo!=="gasto") return `<span class="pill">${mesAb(mesDe(r.data))}</span>`; const m = mesEfetivo({cartao:true, tipo:"gasto", fatura:r.fatura, cat:r.cat, data:r.data, parc:r.parcInfo}); return `<span class="pill ${m===mesDe(r.data)?"g":"y"}">${mesAb(m)}</span>`; }
 function resumoLote(){
@@ -1381,7 +1518,7 @@ function importarCSV(text){
     const iD=h.indexOf("date"), iT=h.indexOf("title"), iA=h.indexOf("amount");
     for (const r of rows.slice(1)){ const v = parseFloat(r[iA]); const data = dataBR(r[iD]); if (!data||!isFinite(v)) continue;
       const desc = titulo(String(r[iT]).replace(/\*/g," ")).replace(/\s+-\s+Parcela.*$/i,"");
-      if (/pagamento recebido/i.test(r[iT])) { out.push({data, desc, valor:Math.abs(v), tipo:"interno", cat:null}); continue; }
+      if (/pagamento recebido|pagamento antecipado|pagamento efetuado/i.test(r[iT])) { out.push({data, desc:"Pagamento da fatura", valor:Math.abs(v), tipo:"pagfatura", cat:null}); continue; }
       const parc = String(r[iT]).match(/parcela\s*(\d+)\s*\/\s*(\d+)/i);
       out.push({data, desc, valor:Math.abs(v), tipo: v<0?"receita":"gasto", cat: v<0?"__rec":categorizar(desc), cartao: v>0, parcInfo: parc ? parc[1]+"/"+parc[2] : null}); }
     out._fatura = true;
@@ -1396,7 +1533,8 @@ function importarCSV(text){
     desc = titulo(desc.replace(/\*/g," ")).slice(0,60) || "Lançamento";
     let tipo = v<0 ? "gasto" : "receita";
     const n = norm(raw);
-    if (/pagamento de fatura|aplicacao rdb|resgate rdb|caixinha|transferencia entre contas|guardado|dinheiro guardado|dinheiro resgatado/.test(n)) tipo = "interno";
+    if (/pagamento de fatura/.test(n)) { tipo = "pagfatura"; desc = "Pagamento da fatura"; }
+    else if (/aplicacao rdb|resgate rdb|caixinha|transferencia entre contas|guardado|dinheiro guardado|dinheiro resgatado/.test(n)) tipo = "interno";
     if (/pix/.test(n) && tipo==="gasto") desc = "Pix · " + desc;
     out.push({data, desc, valor:Math.abs(v), tipo, cat: tipo==="gasto"?categorizar(desc):(tipo==="receita"?"__rec":null)});
   }
@@ -1408,7 +1546,7 @@ function promptExtrair(extra){
   return `Você extrai lançamentos financeiros pessoais de um brasileiro a partir de ${extra}.
 Hoje é ${hoje()}. Se o ano não aparecer, use o ano mais provável perto de hoje.
 Categorias válidas (id: nome): ${S.cfg.cats.map(c=>c.id+": "+c.nome).join("; ")}.
-Regras: "valor" sempre positivo em reais (número, ponto decimal). "tipo": "gasto" para compras, pagamentos, saques e pix enviados; "receita" para salário, extra, pix ou transferência recebida, estorno; "aporte" quando a pessoa diz que guardou/poupou dinheiro numa meta; "resgate" quando tirou dinheiro da poupança/meta; "interno" para pagamento de fatura, transferência entre contas da mesma pessoa, aplicação ou resgate de caixinha/RDB. "desc": nome curto e legível do estabelecimento ou pessoa, sem códigos nem asteriscos. "cat": o id mais provável para gastos, ou null. "data": AAAA-MM-DD.
+Regras: "valor" sempre positivo em reais (número, ponto decimal). "tipo": "gasto" para compras, pagamentos, saques e pix enviados; "receita" para salário, extra, pix ou transferência recebida, estorno; "aporte" quando a pessoa diz que guardou/poupou dinheiro numa meta; "resgate" quando tirou dinheiro da poupança/meta; "pagfatura" para pagamento ou adiantamento da fatura do cartão (ex.: "Pagamento recebido"); "interno" para transferência entre contas da mesma pessoa, aplicação ou resgate de caixinha/RDB. "desc": nome curto e legível do estabelecimento ou pessoa, sem códigos nem asteriscos. "cat": o id mais provável para gastos, ou null. "data": AAAA-MM-DD.
 Se a pessoa disser um total e depois detalhar ("recebi 1200, sendo 700 de X e 500 de Y"), lance só as partes detalhadas, não o total. Faça as contas que ela escrever (ex.: "1200+12" = 1212).
 Fontes de receita cadastradas (id: nome): ${(S.cfg.receitas||[]).map(r=>r.id+": "+r.nome).join("; ")||"nenhuma"}. Para receitas que vêm de uma delas, inclua "fonte" com o id.
 Ignore saldos, limites e linhas que não são transações.
@@ -1448,7 +1586,7 @@ async function iaExtrair(texto, imagens){
     let arr = await S.ai.json(input, imagens); let venc = null;
     if (arr && !Array.isArray(arr)){ venc = /^\d{4}-\d{2}$/.test(String(arr.vencimento||"")) ? arr.vencimento : null; arr = arr.lancamentos || arr.itens || arr.transacoes || Object.values(arr).find(Array.isArray) || []; }
     if (!Array.isArray(arr) || !arr.length){ toast("Não encontrei lançamentos aí."); return; }
-    const rows = arr.map(x=>({data: dataBR(x.data)||hoje(), desc: titulo(x.desc||"Lançamento").slice(0,60), valor: Math.abs(+x.valor||0), tipo: ["gasto","receita","aporte","resgate","interno"].includes(x.tipo)?x.tipo:"gasto", cat: catById(x.cat)?x.cat:null, rec: (S.cfg.receitas||[]).find(r=>r.id===x.fonte)?x.fonte:null, cartao: !!x.cartao && (x.tipo||"gasto")==="gasto", parcInfo: /^\d+\/\d+$/.test(String(x.parcela||"")) ? x.parcela : null}))
+    const rows = arr.map(x=>({data: dataBR(x.data)||hoje(), desc: titulo(x.desc||"Lançamento").slice(0,60), valor: Math.abs(+x.valor||0), tipo: ["gasto","receita","aporte","resgate","pagfatura","interno"].includes(x.tipo)?x.tipo:"gasto", cat: catById(x.cat)?x.cat:null, rec: (S.cfg.receitas||[]).find(r=>r.id===x.fonte)?x.fonte:null, cartao: !!x.cartao && (x.tipo||"gasto")==="gasto", parcInfo: /^\d+\/\d+$/.test(String(x.parcela||"")) ? x.parcela : null}))
       .filter(r=>r.valor>0).map(r=>{ if (r.tipo==="gasto"){ const local = categorizar(r.desc); if (local && S.cfg.regras[keyOf(r.desc)]) r.cat = local; else r.cat = r.cat || local; } if (r.tipo==="receita") r.cat="__rec"; return r; });
     hideToast();
     folhaLote(rows, `${rows.length} lançamentos encontrados`, "A IA leu e categorizou. Confira antes de lançar.", venc);
@@ -1512,7 +1650,7 @@ function atualizarPreview(){
   if (P.itens.length>1 || P.linhas.length>1){
     atualP = {lote:P.itens, falhas:P.falhas, texto:v, multi:P.linhas.length>1};
     $("#goBtn").disabled = !P.itens.length && !S.ai;
-    const cor = {gasto:"",receita:"g",aporte:"y",resgate:"y"};
+    const cor = {gasto:"",receita:"g",aporte:"y",resgate:"y",pagfatura:"y"};
     pv.innerHTML = P.itens.slice(0,8).map(p=>`<span class="pill ${cor[p.tipo]}">${p.tipo==="receita"?"+":p.tipo==="gasto"?"−":p.tipo==="aporte"?"→":"←"} ${fm(p.valor)} · ${esc(p.desc)}</span>`).join("")
       + (P.itens.length>8?`<span class="hint">+${P.itens.length-8}</span>`:"")
       + (P.falhas.length?`<span class="pill o">${P.falhas.length} trecho(s) sem valor</span>`:"") + iaBtn;
@@ -1521,7 +1659,7 @@ function atualizarPreview(){
   const p = P.itens[0] || null; atualP = p;
   $("#goBtn").disabled = !p && !S.ai;
   if (!p){ pv.innerHTML = `<span class="pill o">Faltou o valor</span><span class="hint">Ex.: “mercado 230”.</span>${iaBtn}`; return; }
-  const tipoL = {gasto:["Gasto",""],receita:["Receita","g"],aporte:["Guardar","y"],resgate:["Resgate","y"]}[p.tipo];
+  const tipoL = {gasto:["Gasto",""],receita:["Receita","g"],aporte:["Guardar","y"],resgate:["Resgate","y"],pagfatura:["Pagou a fatura","y"]}[p.tipo];
   const catSel = p.tipo==="gasto" ? `<span class="pill ${p.cat?"":"o"}"><span class="dot" style="--cc:${corCat(p.cat)}"></span><select id="pvCat" aria-label="Categoria">${p.cat?"":`<option value="">Sem categoria</option>`}${S.cfg.cats.map(c=>`<option value="${c.id}" ${p.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select></span>` : "";
   const metaSel = (p.tipo==="aporte"||p.tipo==="resgate") && (S.cfg.metas||[]).length ? `<span class="pill y"><select id="pvMeta" aria-label="Meta">${S.cfg.metas.map(m=>`<option value="${m.id}" ${p.meta===m.id?"selected":""}>${esc(m.nome)}</option>`).join("")}</select></span>` : "";
   const d = p.data===hoje() ? "hoje" : p.data.slice(8)+"/"+p.data.slice(5,7);
@@ -1554,7 +1692,7 @@ async function lancarDaBarra(){
   $("#q").value = ""; atualizarPreview();
   try{
     const ids = await lancarParsed(p);
-    toast(`${p.tipo==="receita"?"Receita":p.tipo==="aporte"?"Guardado":"Gasto"} de ${fm(p.valor)} lançado${p.parcelas>1?" em "+p.parcelas+" parcelas":""}`, async ()=>{ for (const id of ids) await apagarLanc(id); toast("Desfeito"); });
+    toast(`${p.tipo==="receita"?"Receita":p.tipo==="aporte"?"Guardado":p.tipo==="pagfatura"?"Pagamento da fatura":"Gasto"} de ${fm(p.valor)} lançado${p.parcelas>1?" em "+p.parcelas+" parcelas":""}`, async ()=>{ for (const id of ids) await apagarLanc(id); toast("Desfeito"); });
   }catch(e){ toast("Não consegui salvar. Confira a conexão e tente de novo."); }
 }
 
@@ -1613,10 +1751,22 @@ async function acao(a, el){
       await apagarLanc(arg); toast("Apagado", async()=>{ await gravarLanc(arg, d); }); return; }
     case "apagarGrupo": { if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="Confirmar"; return; }
       fecharFolha(); const ids = [...S.lanc.entries()].filter(([,d])=>d.grupo===arg).map(([id])=>id); for (const id of ids) await apagarLanc(id); toast(`${ids.length} parcelas apagadas`); return; }
-    case "lancarLote": { const rows = (memo.get("lote")||[]).filter(r=>r._on && r.tipo!=="interno" && r.valor>0); fecharFolha();
-      let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:(r.tipo==="aporte"||r.tipo==="resgate")?(r.meta||S.cfg.metas[0]?.id):null, rec:r.tipo==="receita"?r.rec:null, data:r.data, parcelas:r.parcelas||1, cartao:!!r.cartao, fatura:r.fatura||null, parcInfo:r.parcInfo||null, origem:"importado"})); }
-      toast(`${rows.length} lançamentos adicionados`, async()=>{ for (const id of all) await apagarLanc(id); toast("Desfeito"); }); return; }
+    case "lancarLote": { const todas = memo.get("lote")||[]; const rows = todas.filter(r=>r._on && r.tipo!=="interno" && r.valor>0); fecharFolha();
+      let ligados = 0;
+      for (const r of todas.filter(r=>!r._on && r._dupId && (r.cartao || r.nota || +r.parte))){ const d = S.lanc.get(r._dupId); if (!d) continue; const nd = Object.assign({}, d);
+        if (r.cartao && d.tipo==="gasto"){ nd.cartao = true; nd.fatura = r.fatura || faturaDe(d.data); }
+        if (r.nota && !d.nota) nd.nota = r.nota;
+        if (+r.parte>0 && !d.divide){ const tot = totalDe(d), pt = Math.min(+r.parte, tot); nd.valorTotal = tot; nd.valor = r2(tot-pt); nd.divide = {quem:r.quem||"Alguém", valor:r2(pt), recebido:false}; }
+        await gravarLanc(r._dupId, nd); ligados++; }
+      let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:(r.tipo==="aporte"||r.tipo==="resgate")?(r.meta||S.cfg.metas[0]?.id):null, rec:r.tipo==="receita"?r.rec:null, data:r.data, parcelas:r.parcelas||1, cartao:!!r.cartao, fatura:r.fatura||null, parcInfo:r.parcInfo||null, nota:r.nota||null, divide: +r.parte>0 ? {quem:r.quem, valor:+r.parte} : null, origem:"importado"})); }
+      toast(`${rows.length} lançamentos adicionados${ligados?` · ${ligados} já existentes ligados à fatura`:""}`, async()=>{ for (const id of all) await apagarLanc(id); toast("Desfeito"); }); return; }
     case "abrirImport": folhaColar(); return;
+    case "recebi": { const d = S.lanc.get(arg); if (!d?.divide) return; await gravarLanc(arg, Object.assign({}, d, {divide: Object.assign({}, d.divide, {recebido:true, dataRec: hoje()})})); toast(`${d.divide.quem} pagou ${fm(d.divide.valor)}`, async()=>{ await gravarLanc(arg, d); }); return; }
+    case "analisarFatura": { const itens = [...S.lanc.values()].filter(d=>(d.cartao && d.tipo==="gasto" && d.fatura===arg) || (d.tipo==="pagfatura" && d.fatura===arg)); folhaAnalise(itens.map(d=>({data:d.data, desc:d.desc, valor:totalDe(d), minha:d.valor, cat:d.cat, tipo:d.tipo, parcInfo:d.parc, fatura:d.fatura, cartao:d.cartao, nota:d.nota, divide:d.divide})), arg, false); return; }
+    case "analisarLote": { const rows = (memo.get("lote")||[]).filter(r=>(r._on || r._dupId) && r.tipo!=="interno"); folhaAnalise(rows.map(r=>({data:r.data, desc:r.desc, valor:+r.valor||0, minha:(+r.valor||0) - (+r.parte||0), cat:r.cat, tipo:r.tipo, parcInfo:r.parcInfo, fatura:r.fatura, cartao:r.cartao, nota:r.nota, divide: +r.parte>0?{quem:r.quem,valor:+r.parte}:null})), memo.get("loteVenc"), true); return; }
+    case "voltarLote": { const rows = memo.get("lote"); if (rows) folhaLote(rows, memo.get("loteTitulo")||"Lançamentos", null, memo.get("loteVenc"), true); return; }
+    case "iaAnalise": iaAnalisar(); return;
+    case "toggleExtra": { const tr = document.querySelector(`[data-extra="${arg}"]`); if (tr) tr.hidden = !tr.hidden; return; }
     case "loginEmail": abrirFolha(`<h3>Entrar com e-mail</h3><p class="lead">Use o e-mail da sua conta e a senha que você criou em Ajustes → Acesso pelo celular.</p>
       <form id="loginF"><div class="fgrid"><label class="full">E-mail<input name="email" type="email" autocomplete="email" required></label><label class="full">Senha<input name="senha" type="password" autocomplete="current-password" required minlength="6"></label></div>
       <div class="sheet-foot"><button type="button" class="btn" data-act="esqueci">Esqueci a senha</button><span style="flex:1"></span><button type="button" class="btn" data-close>Cancelar</button><button class="btn green">Entrar</button></div></form>`); return;
@@ -1702,7 +1852,7 @@ document.addEventListener("input", e=>{
   const t = e.target;
   if (t.id==="busca"){ S.ext.busca = t.value; render(); return; }
   if (t.id==="loteVenc"){ const v = t.value; memo.set("loteVenc", v); (memo.get("lote")||[]).forEach((r,i)=>{ if (r.cartao){ r.fatura = v; const c = document.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); } }); resumoLote(); return; }
-  if (t.dataset.lote){ const [i,k] = t.dataset.lote.split("."); const r = memo.get("lote")[+i]; if (k==="on") r._on = t.checked; else if (k==="valor") r.valor = parseValor(t.value)||0; else r[k] = t.value || (k==="cat"?null:t.value); if (k==="tipo" && t.value==="interno"){ r._on=false; t.closest("tr").querySelector('[data-lote$=".on"]').checked=false; } const b=$("#loteBtn"); if (b) b.textContent = "Lançar "+memo.get("lote").filter(x=>x._on && x.tipo!=="interno").length; const c = document.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); resumoLote(); }
+  if (t.dataset.lote){ const [i,k] = t.dataset.lote.split("."); const r = memo.get("lote")[+i]; if (k==="on") r._on = t.checked; else if (k==="valor") r.valor = parseValor(t.value)||0; else if (k==="parte") r.parte = parseValor(t.value)||0; else r[k] = t.value || (k==="cat"?null:t.value); if (k==="tipo" && t.value==="interno"){ r._on=false; t.closest("tr").querySelector('[data-lote$=".on"]').checked=false; } const b=$("#loteBtn"); if (b) b.textContent = rotuloLote(); const c = document.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); resumoLote(); }
 });
 document.addEventListener("change", e=>{
   const t = e.target;
@@ -1728,7 +1878,11 @@ document.addEventListener("submit", e=>{
   if (e.target.id==="editF"){
     const f = e.target, id = f.dataset.id, d = S.lanc.get(id); const fd = new FormData(f);
     const nd = Object.assign({}, d, {desc: fd.get("desc").trim()||d.desc, valor: parseValor(fd.get("valor"))||d.valor, data: fd.get("data")||d.data, tipo: fd.get("tipo"), cat: fd.get("tipo")==="gasto" ? (fd.get("cat")||null) : (fd.get("tipo")==="receita"?"__rec":null), meta: fd.get("meta")||d.meta||null});
-    if (fd.get("cartao") && nd.tipo==="gasto"){ nd.cartao = true; nd.fatura = fd.get("fatura") || faturaDe(nd.data); } else { delete nd.cartao; delete nd.fatura; }
+    if (fd.get("cartao") && nd.tipo==="gasto"){ nd.cartao = true; nd.fatura = fd.get("fatura") || faturaDe(nd.data); } else if (nd.tipo==="pagfatura"){ delete nd.cartao; nd.fatura = fd.get("fatura") || faturaDe(nd.data); nd.cat = null; } else { delete nd.cartao; delete nd.fatura; }
+    const total = parseValor(fd.get("valor")) || totalDe(d); const parte = parseValor(fd.get("parte")||"") || 0; const quem = String(fd.get("quem")||"").trim();
+    if (nd.tipo==="gasto" && parte > 0){ nd.valorTotal = total; nd.valor = r2(total - Math.min(parte,total)); nd.divide = {quem: quem || "Alguém", valor: r2(Math.min(parte,total)), recebido: !!fd.get("recebido")}; }
+    else { nd.valor = total; delete nd.valorTotal; delete nd.divide; }
+    const nota = String(fd.get("nota")||"").trim(); if (nota) nd.nota = nota.slice(0,300); else delete nd.nota;
     nd.revisar = nd.tipo==="gasto" && !nd.cat; nd.h = hashL(nd);
     if (fd.get("aprender") && nd.tipo==="gasto" && nd.cat){ const k = keyOf(nd.desc); if (k && S.cfg.regras[k]!==nd.cat){ S.cfg.regras[k] = nd.cat; salvarCfg();
       // aplica a regra aos outros lançamentos sem categoria com a mesma chave
