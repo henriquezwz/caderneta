@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Caderneta · diagnóstico</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#F3F5FB;color:#141B34;margin:0;padding:16px;font-size:15px}
+h1{font-size:20px;margin:0 0 4px}
+p{color:#5E6784;margin:0 0 14px}
+.t{background:#fff;border-radius:12px;padding:12px 14px;margin:0 0 8px;display:grid;grid-template-columns:28px 1fr;gap:4px 8px}
+.t b{font-size:14px}.t small{grid-column:2;color:#5E6784;word-break:break-word}
+.ok{color:#12B07F}.er{color:#E0363B}.wa{color:#F2A007}
+form{background:#fff;border-radius:12px;padding:12px 14px;margin:14px 0;display:grid;gap:8px}
+input{padding:10px;border:1.5px solid #DCE1EE;border-radius:8px;font-size:15px}
+button{padding:11px;border:0;border-radius:8px;background:#2D5BFF;color:#fff;font-weight:700;font-size:15px}
+</style></head><body>
+<h1>Diagnóstico da Caderneta</h1>
+<p>Espere todos os testes terminarem (uns 20 segundos) e mande um print desta tela.</p>
+<div id="out"></div>
+<form id="f"><b>Teste de login (opcional)</b><input name="e" type="email" placeholder="E-mail" autocomplete="email"><input name="s" type="password" placeholder="Senha" autocomplete="current-password"><button>Testar login</button></form>
+<div id="out2"></div>
+<script>
+const KEY="AIzaSyA7FLZU72kH_8XIiwVFwoIA1AC-koh_EYU", PROJ="caderneta-80f6f", V="12.19.0";
+const out=document.getElementById("out"), out2=document.getElementById("out2");
+function linha(alvo, nome){ const d=document.createElement("div"); d.className="t"; d.innerHTML=`<span class="wa">…</span><b>${nome}</b><small>testando</small>`; alvo.appendChild(d);
+  return (st, msg)=>{ d.firstChild.className = st==="ok"?"ok":st==="er"?"er":"wa"; d.firstChild.textContent = st==="ok"?"✓":st==="er"?"✗":"!"; d.lastChild.textContent = msg; }; }
+const comTempo=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error("sem resposta em "+ms/1000+"s")),ms))]);
+async function teste(alvo, nome, fn, ms=12000){ const set=linha(alvo,nome); const t0=performance.now();
+  try{ const r = await comTempo(fn(),ms); set(r?.st||"ok", (r?.msg||"ok")+` · ${Math.round(performance.now()-t0)} ms`); return r; }
+  catch(e){ set("er", String(e?.code||"")+" "+String(e?.message||e)+` · ${Math.round(performance.now()-t0)} ms`); } }
+let mods=null;
+(async()=>{
+  await teste(out,"Navegador", async()=>({msg:navigator.userAgent.replace(/^Mozilla\/5.0 /,"").slice(0,140)}));
+  await teste(out,"Armazenamento simples (localStorage)", async()=>{ localStorage.setItem("x","1"); localStorage.removeItem("x"); return {msg:"funciona"}; });
+  await teste(out,"Banco do navegador (IndexedDB)", ()=>new Promise((res,rej)=>{ const r=indexedDB.open("teste-caderneta"); r.onsuccess=()=>{ r.result.close(); res({msg:"funciona"}); }; r.onerror=()=>rej(r.error); r.onblocked=()=>rej(new Error("bloqueado")); }), 8000);
+  await teste(out,"Servidor de login do Google (Identity Toolkit)", async()=>{
+    const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key=${KEY}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({identifier:"teste@exemplo.com",continueUri:location.href})});
+    const j = await r.json().catch(()=>({})); if (!r.ok) return {st:"er", msg:"HTTP "+r.status+" "+(j.error?.message||"")}; return {msg:"responde (HTTP "+r.status+")"}; });
+  await teste(out,"Login por e-mail ativado no Firebase", async()=>{
+    const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${KEY}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:"naoexiste-"+Date.now()+"@exemplo.com",password:"xxxxxx1",returnSecureToken:true})});
+    const j = await r.json().catch(()=>({})); const m = j.error?.message||"";
+    if (/OPERATION_NOT_ALLOWED|PASSWORD_LOGIN_DISABLED/.test(m)) return {st:"er", msg:"NÃO está ativado (Authentication → Sign-in method → E-mail/senha)"};
+    if (/EMAIL_NOT_FOUND|INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD/.test(m)) return {msg:"ativado"};
+    return {st:"wa", msg:"resposta: "+(m||("HTTP "+r.status))}; });
+  await teste(out,"Banco Firestore do projeto", async()=>{
+    const r = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJ}/databases/(default)/documents/caderneta/teste`);
+    const j = await r.json().catch(()=>({})); const m = (j.error?.status||"")+" "+(j.error?.message||"");
+    if (r.status===403 || /PERMISSION_DENIED/.test(m)) return {msg:"existe e está protegido pelas regras (certo)"};
+    if (r.status===404 && /database|does not exist|NOT_FOUND.*database/i.test(m)) return {st:"er", msg:"NÃO existe: crie em Build → Firestore Database"};
+    if (r.status===404) return {st:"wa", msg:"existe, mas as regras deixam ler sem login (confira as regras)"};
+    if (r.ok) return {st:"wa", msg:"existe, mas as regras deixam ler sem login (confira as regras)"};
+    return {st:"wa", msg:"HTTP "+r.status+" "+m}; });
+  await teste(out,"Baixar Firebase (gstatic)", async()=>{ mods = await Promise.all([import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`)]); return {msg:"baixou"}; }, 20000);
+  if (mods) await teste(out,"Iniciar login do Firebase", ()=>new Promise((res)=>{ const [appM,authM]=mods; const app=appM.initializeApp({apiKey:KEY,authDomain:PROJ+".firebaseapp.com",projectId:PROJ},"diag"); const auth=authM.initializeAuth(app,{persistence:authM.browserLocalPersistence}); window._auth=auth; window._authM=authM; authM.onAuthStateChanged(auth,u=>res({msg:u?("logado como "+u.email):"pronto (ninguém logado)"})); }), 12000);
+})();
+document.getElementById("f").onsubmit = async e=>{ e.preventDefault(); out2.innerHTML="";
+  const em=e.target.e.value.trim(), se=e.target.s.value;
+  await teste(out2,"Login direto pela API (sem o app do Firebase)", async()=>{
+    const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${KEY}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:em,password:se,returnSecureToken:true})});
+    const j = await r.json().catch(()=>({})); if (!r.ok) return {st:"er", msg:j.error?.message||("HTTP "+r.status)}; return {msg:"senha certa, conta "+j.email}; });
+  if (window._auth) await teste(out2,"Login pelo app do Firebase", async()=>{ const c = await window._authM.signInWithEmailAndPassword(window._auth, em, se); return {msg:"entrou como "+c.user.email}; }, 15000);
+};
+</script>
+</body></html>
