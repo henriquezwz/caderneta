@@ -935,7 +935,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 14:30";
+const VERSAO = "12/10 14:40";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1721,7 +1721,10 @@ document.addEventListener("submit", e=>{
   e.preventDefault();
   if (e.target.id==="askF"){ perguntar($("#askIn").value); return; }
   if (e.target.id==="loginF"){ const fd = new FormData(e.target); const btn = e.target.querySelector("button.green"); btn.disabled = true; btn.textContent = "Entrando…";
-    FB.authM.signInWithEmailAndPassword(FB.auth, String(fd.get("email")).trim(), String(fd.get("senha"))).then(()=>{ fecharFolha(); toast("Pronto, você entrou."); }).catch(err=>{ btn.disabled = false; btn.textContent = "Entrar"; toast(erroAuth(err)); }); return; }
+    const limite = new Promise((_, rej) => setTimeout(() => rej({code:"tempo"}), 15000));
+    Promise.race([FB.authM.signInWithEmailAndPassword(FB.auth, String(fd.get("email")).trim(), String(fd.get("senha"))), limite])
+      .then(()=>{ fecharFolha(); toast("Pronto, você entrou."); })
+      .catch(err=>{ btn.disabled = false; btn.textContent = "Entrar"; toast(err?.code==="tempo" ? "O Firebase não respondeu em 15 segundos. Recarregue a página e tente de novo." : erroAuth(err), null, 7000); }); return; }
   if (e.target.id==="editF"){
     const f = e.target, id = f.dataset.id, d = S.lanc.get(id); const fd = new FormData(f);
     const nd = Object.assign({}, d, {desc: fd.get("desc").trim()||d.desc, valor: parseValor(fd.get("valor"))||d.valor, data: fd.get("data")||d.data, tipo: fd.get("tipo"), cat: fd.get("tipo")==="gasto" ? (fd.get("cat")||null) : (fd.get("tipo")==="receita"?"__rec":null), meta: fd.get("meta")||d.meta||null});
@@ -1761,6 +1764,7 @@ function entrarVisitante(motivo){
 }
 async function iniciarFirebase(){
   S.modo = "firebase";
+  try{ if (!localStorage.getItem("caderneta-idb-limpo")){ indexedDB.deleteDatabase("firebaseLocalStorageDb"); localStorage.setItem("caderneta-idb-limpo","1"); } }catch(e){}
   const limite = setTimeout(() => { if (!S.db) entrarVisitante("Não consegui verificar seu login a tempo (" + (S.etapa||"") + "). Você está no modo visitante; tente entrar de novo."); }, 9000);
   try{
     const base = `https://www.gstatic.com/firebasejs/${FB_V}/`;
@@ -1770,7 +1774,7 @@ async function iniciarFirebase(){
     const app = appM.initializeApp(FB_CFG, "caderneta");
     const fdb = fsM.getFirestore(app);
     let auth;
-    try{ auth = authM.initializeAuth(app, {persistence: [authM.browserLocalPersistence, authM.indexedDBLocalPersistence]}); }
+    try{ auth = authM.initializeAuth(app, {persistence: authM.browserLocalPersistence}); }
     catch(e){ auth = authM.getAuth(app); }
     FB = {authM, auth, fsM, fdb, app};
     etapa("verificando seu login");
