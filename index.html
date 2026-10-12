@@ -1017,6 +1017,28 @@ function cartaoDoMes(m){
   const adiantar = Math.max(0, r2(adiantarTot - adiantadoMes));
   return {m, prox, fi, devido, auto, manual: ov!=null, pagoMes, pend, adiantar, adiantarTot, adiantadoMes, nAntes: antes.length, totAntes: r2(sum(antes, totalDe)), nItens: naConta.length};
 }
+/* cada gasto do mês "entra" num item do plano: pelo vínculo, pelo que você ensinou, pela categoria do orçamento, ou cai em "Outros (dia a dia)" */
+const NOME_CATS = [[/^(saidas?|lazer|role)/,["saidas","delivery"]],[/^(ifood|delivery)/,["delivery"]],[/^(gasolina|combust|transporte|uber)/,["transporte"]],[/^(compras|mercado|feira|supermerc)/,["mercado"]],[/^(farmacia|saude|remedio)/,["saude"]],[/^(outros|dia a dia)/,["__resto"]]];
+function catsDoItem(f){ if (f.cats?.length) return f.cats; const n = norm(f.nome); for (const [re,c] of NOME_CATS) if (re.test(n)) return c; return f.cat ? [f.cat] : []; }
+function atribuir(gastos, itens){
+  const byId = new Map(itens.map(f=>[f.id,f])), porNome = new Map(itens.map(f=>[norm(f.nome),f]));
+  const envs = itens.filter(f=>f.env).map(f=>({f, cats:catsDoItem(f)})).sort((a,b)=>a.cats.length-b.cats.length);
+  const resto = envs.find(x=>x.cats.includes("__resto"));
+  const contas = itens.filter(f=>!f.env).map(f=>({f, pal: norm(f.nome).split(/[^a-z0-9]+/).filter(w=>w.length>3 && !["conta","contas","parte","mensal"].includes(w))})).filter(c=>c.pal.length);
+  const porItem = {}, de = new Map(), fora = [];
+  for (const g of gastos){
+    let it = null;
+    if (g.item && g.item!=="__fora") it = byId.get(g.item) || porNome.get(g.item) || null;
+    if (!it && g.fixo) it = byId.get(g.fixo) || null;
+    if (!it && g.item!=="__fora"){ const r = S.cfg.regrasItem?.[keyOf(g.desc)]; if (r==="__fora") g._fora = true; else if (r) it = byId.get(r) || porNome.get(r) || null; }
+    if (!it && g.item!=="__fora" && !g._fora){ const n = norm(g.desc);
+      it = contas.find(c => c.pal.some(w => new RegExp("\\b"+w).test(n)))?.f || null;
+      if (!it){ const e = envs.find(x=>x.cats.includes(g.cat)); if (e) it = e.f; } }
+    if (!it && g.item!=="__fora" && !g._fora && resto) it = resto.f;
+    if (it){ porItem[it.id] = r2((porItem[it.id]||0) + g.valor); if (g.id) de.set(g.id, it.id); } else fora.push(g);
+  }
+  return {porItem, de, fora, foraTot: r2(sum(fora, g=>g.valor))};
+}
 function lancDoMes(m){ return [...S.lanc.entries()].filter(([,d])=>d.mes===m).map(([id,d])=>Object.assign({id},d)); }
 function resumo(m){
   const L = lancDoMes(m);
@@ -1037,9 +1059,9 @@ function resumo(m){
   const prevCat = {}; for (const f of itens) prevCat[f.cat] = (prevCat[f.cat]||0) + previsto(f, m);
   const orc = id => id==="dizimo" ? dz : Math.max(+catById(id)?.orc||0, prevCat[id]||0);
   // itens "envelope" (Saídas, Gasolina, Dia a dia…): não se marcam como pagos; o que você gasta na categoria vai consumindo o previsto
-  const porCatLivre = {}; for (const g of gastos) if (!g.fixo){ const k = g.cat || "__sem"; porCatLivre[k] = (porCatLivre[k]||0) + g.valor; }
-  const fixosStatus = itens.map(f => { if (f.env){ const prev = previsto(f, m), gasto = r2(porCatLivre[f.cat]||0); return {f, env:true, gasto, pago:false, lanc:null, prev, resta: Math.max(0, prev - gasto)}; }
-    const l = L.find(d=>d.fixo===f.id); return {f, pago:!!l, lanc:l, prev: previsto(f, m)}; });
+  const AT = atribuir(gastos, itens);
+  const fixosStatus = itens.map(f => { const gasto = AT.porItem[f.id]||0; if (f.env){ const prev = previsto(f, m); return {f, env:true, gasto, pago:false, lanc:null, prev, resta: Math.max(0, prev - gasto)}; }
+    const l = L.find(d=>d.fixo===f.id) || (gasto ? L.find(d=>AT.de.get(d.id)===f.id) : null); return {f, pago:!!l, lanc:l, gasto, prev: previsto(f, m)}; });
   const fixosPend = sum(fixosStatus.filter(x=>!x.pago), x=>x.env ? x.resta : x.prev);
   let comprometido = 0;
   for (const c of S.cfg.cats) comprometido += Math.max(orc(c.id), porCat[c.id]||0);
@@ -1065,7 +1087,7 @@ function resumo(m){
   const porDia = restantes>0 ? Math.max(0, caixaLivre)/restantes : 0;
   const decorrido = m===atual ? dia/dim : (m<atual ? 1 : 0);
   return {L, gastos, receitas, aportes, entrou, saiu, guardado, receitaPrev, porCat, orc, dz, fixosStatus, fixosPend,
-          comprometido, metaMensal, sobraPrev: MF ? planSobra : sobraPrev, livre, restantes, porDia, decorrido, caixaLivre, ajuste, guardarPend, dzPend, CM, cartPend, saiuCartao, contasPrev, cartPrev, planSobra};
+          comprometido, metaMensal, sobraPrev: MF ? planSobra : sobraPrev, livre, restantes, porDia, decorrido, caixaLivre, ajuste, guardarPend, dzPend, AT, CM, cartPend, saiuCartao, contasPrev, cartPrev, planSobra};
 }
 
 function avisos(m, R){
@@ -1178,7 +1200,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 17:40";
+const VERSAO = "12/10 18:10";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1189,7 +1211,13 @@ function render(){
     $("#view").innerHTML = `<div class="panel" style="border:2px solid var(--danger)"><b>Algo deu errado ao montar a tela.</b><p class="note">Me mande um print desta mensagem.</p><pre style="white-space:pre-wrap;font-size:12px;overflow:auto;max-height:240px">${esc(ultimoErro).slice(0,1500)}</pre><p class="note">versão ${VERSAO}</p><div class="btns"><button class="btn" data-act="sair">Sair e usar sem login</button><button class="btn" onclick="location.reload()">Recarregar</button></div></div>`;
   }
 }
+function migrarCfg(){
+  if (!S.gotCfg || S.visitante || S.cfg.v3) return; let mudou = false;
+  const pet = catById("pet"); if (pet && !/^pet/i.test(pet.nome)){ pet.nome = "Pet"; mudou = true; }
+  S.cfg.v3 = true; salvarCfg(true);
+}
 function renderInterno(){
+  try{ migrarCfg(); }catch(e){}
   document.body.classList.toggle("deslogado", !S.db);
   if (!S.db){ renderTabs(); $("#view").innerHTML = viewEntrada(); return; }
   renderTabs();
@@ -1306,9 +1334,10 @@ function viewMes(){
         </button>`; }).join("")}</div>`;
   }).join("");
   const sem = R.porCat.__sem ? `<div class="grp"><div class="grp-h"><b>Sem categoria</b><span>${fm0(R.porCat.__sem)}</span></div><button class="env over" data-act="revisar"><div class="env-top"><span class="env-name"><span class="ic" style="--cc:var(--danger)">?</span>Para revisar</span><span class="env-v"><b>${fm0(R.porCat.__sem)}</b></span></div></button></div>` : "";
-  const envPanel = `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--blue)">Orçamento por categoria</h2><button class="act" data-act="go:ajustes">Ajustar</button></div>${grupos || `<p class="note">Nenhuma categoria com orçamento ainda.</p>`}${sem}
+  const envPanelVelho = `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--blue)">Orçamento por categoria</h2><button class="act" data-act="go:ajustes">Ajustar</button></div>${grupos || `<p class="note">Nenhuma categoria com orçamento ainda.</p>`}${sem}
     ${m===atual?`<p class="note" style="margin-top:12px">O risquinho em cada barra marca onde o mês está hoje. Barra passando dele = ritmo acima do previsto.</p>`:""}</section>`;
 
+  const envPanel = modoFatura() ? painelAcompanha(m, R) : envPanelVelho;
   // parcelas futuras
   const fut = {}; for (const d of S.lanc.values()) if (d.grupo && d.mes>m) fut[d.mes]=(fut[d.mes]||0)+d.valor;
   const futK = Object.keys(fut).sort().slice(0,6);
@@ -1325,6 +1354,23 @@ function viewMes(){
   if (vazio) return `<div class="grid"><div class="panel empty"><b>Carregando sua caderneta…</b>${S.modo==="firebase" ? "Conectando ao seu Firebase. Se passar de alguns segundos, recarregue a página." : "Se demorar, abra este link no Claude conectado à sua conta."}</div></div>`;
   const cartPanel = painelCartao(m);
   return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${alertas}${recPanel}${painelReceber()}${metas}</div></div>`;
+}
+function painelAcompanha(m, R){
+  const MM = MES[+m.slice(5)-1], aberto = memo.get("itemAberto"), atual = mesDe(hoje());
+  const lancsDe = id => R.gastos.filter(g => id==="__fora" ? !R.AT.de.has(g.id) : R.AT.de.get(g.id)===id).sort((a,b)=>a.data<b.data?1:-1);
+  const lista = id => { const ls = lancsDe(id); return `<div class="ac-lista">${ls.length ? ls.map(g=>`<button class="tx sub" data-edit="${g.id}"><span class="d">${esc(g.desc)}</span><span class="val num">− ${fm(g.valor)}</span><span class="m">${g.data.slice(8)}/${g.data.slice(5,7)}${g.cartao?" · cartão":""} · toque para mudar onde entra</span></button>`).join("") : `<p class="note" style="margin:6px 0">Nenhum gasto ainda.</p>`}</div>`; };
+  const linhaIt = x => { const prev = x.prev, g = x.env ? x.gasto : (x.pago ? (x.lanc?.valor ?? x.gasto) : x.gasto), over = prev>0 && g > prev + 0.5;
+    const w = prev>0 ? Math.min(100, g/prev*100) : (g>0?100:0); const ab = aberto===x.f.id;
+    return `<div class="ac-it ${ab?"open":""}"><button class="env ${over?"over":""}" data-act="verItem:${x.f.id}" style="--cc:${corCat(x.f.cat)}">
+      <div class="env-top"><span class="env-name">${esc(x.f.nome)} ${over?`<span class="env-tag">+${fm0(g-prev)}</span>`:""}${!x.env && x.pago?` <span class="pill g" style="font-size:11px">pago</span>`:""}</span><span class="env-v"><b>${fm0(g)}</b> de ${fm0(prev)}</span></div>
+      <div class="track"><span class="fill" style="width:${w.toFixed(1)}%"></span>${x.env && m===atual && prev>0 ? `<span class="pace" style="left:${(R.decorrido*100).toFixed(1)}%"></span>`:""}</div></button>${ab?lista(x.f.id):""}</div>`; };
+  const fs = R.fixosStatus, grupos = [["Dia a dia", fs.filter(x=>x.env)], ["Contas", fs.filter(x=>!x.env && !x.f.soMes)], ["Planejados", fs.filter(x=>x.f.soMes)]];
+  const ab = aberto==="__fora";
+  return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--blue)">Gastos de ${MM} por item</h2><button class="act" data-act="planejar:${m}">Planejar</button></div>
+    ${fs.length ? grupos.filter(([,xs])=>xs.length).map(([nome,xs])=>`<div class="grp"><div class="grp-h"><b>${nome}</b><span>${fm0(sum(xs,x=>x.env?x.gasto:(x.pago?(x.lanc?.valor??x.gasto):x.gasto)))} / ${fm0(sum(xs,x=>x.prev))}</span></div>${xs.map(linhaIt).join("")}</div>`).join("")
+      : `<p class="note">Monte o plano do mês e cada item aparece aqui com quanto você já gastou nele.</p>`}
+    ${R.AT.fora.length ? `<div class="grp"><div class="ac-it ${ab?"open":""}"><button class="env over" data-act="verItem:__fora" style="--cc:var(--muted)"><div class="env-top"><span class="env-name">Fora do plano</span><span class="env-v"><b>${fm0(R.AT.foraTot)}</b> · ${R.AT.fora.length} ${R.AT.fora.length>1?"gastos":"gasto"}</span></div></button>${ab?lista("__fora"):""}</div></div>` : ""}
+    <p class="note" style="margin-top:10px">Toque num item para ver os gastos dele. Toque num gasto para mudar o item em que ele entra; o app aprende para as próximas vezes.</p></section>`;
 }
 function blocoPlano(m, R){
   const MM = MES[+m.slice(5)-1], CM = R.CM, atual = mesDe(hoje());
@@ -1504,6 +1550,7 @@ function viewExtrato(){
       L.push({id:"fat:"+venc, _grupo:true, venc, g, data:dia, tipo:"grupo", valor: sum(g.itens, x=>x.valor), criado: 0}); }
     L.sort((a,b)=> a.data===b.data ? (b.criado||0)-(a.criado||0) : (a.data<b.data?1:-1));
   }
+  const atrib = {}; const itemDe = d => { if (d.tipo!=="gasto" || !d.mes) return null; const A = (atrib[d.mes] ||= resumo(d.mes).AT); const id = A.de.get(d.id); return id ? (S.cfg.fixos||[]).find(f=>f.id===id)?.nome : null; };
   const byDay = {}; for (const d of L) (byDay[d.data] ||= []).push(d);
   const chip = (id,n) => `<button class="chip" data-ext-tipo="${id}" aria-pressed="${E.tipo===id}">${n}</button>`;
   const catOpts = `<option value="">Todas as categorias</option>`+S.cfg.cats.map(c=>`<option value="${c.id}" ${E.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("");
@@ -1518,7 +1565,7 @@ function viewExtrato(){
     ${L.length ? Object.keys(byDay).map(day=>`<div class="day"><div class="day-h"><span>${esc(diaSemana(day))}</span><span class="num">${fm(sum(byDay[day].filter(d=>d.tipo==="gasto"||d.tipo==="grupo"),d=>d.valor))}</span></div>
       ${byDay[day].map(d=>{ if (d._grupo) return grupoFatura(d);
         const cls = d.tipo==="receita"?"in":(d.tipo==="aporte"||d.tipo==="resgate")?"sv":""; const sinal = d.tipo==="ajuste" ? (d.valor>=0?"+":"−") : d.tipo==="receita"?"+":(d.tipo==="gasto"?"−":(d.tipo==="aporte"?"→":d.tipo==="pagfatura"?"✓":"←"));
-        const lab = d.tipo==="ajuste" ? "Ajuste manual de saldo (toque para tirar)" : d.tipo==="pagfatura" ? `Pagamento da fatura de ${mesAb(d.fatura)} (não entra no orçamento)` : d.tipo==="gasto" ? catNome(d.cat) : d.tipo==="receita" ? "Receita" : d.tipo==="aporte" ? "Guardado em "+((S.cfg.metas.find(x=>x.id===d.meta)||S.cfg.metas[0]||{}).nome||"meta") : "Resgate";
+        const lab = d.tipo==="ajuste" ? "Ajuste manual de saldo (toque para tirar)" : d.tipo==="pagfatura" ? `Pagamento da fatura de ${mesAb(d.fatura)} (não entra no orçamento)` : d.tipo==="gasto" ? (itemDe(d) || (modoFatura() && !(d.cartao && d.mes===d.fatura) ? "Fora do plano" : catNome(d.cat))) : d.tipo==="receita" ? "Receita" : d.tipo==="aporte" ? "Guardado em "+((S.cfg.metas.find(x=>x.id===d.meta)||S.cfg.metas[0]||{}).nome||"meta") : "Resgate";
         return `<button class="tx" ${d.tipo==="ajuste"?`data-act="limparAjuste:${d.mes}"`:`data-edit="${d.id}"`}><span class="d">${esc(d.desc)}</span><span class="val num ${cls}">${sinal} ${fm(Math.abs(d.valor))}</span>
           <span class="m">${d.tipo==="gasto"?`<span class="dot" style="--cc:${corCat(d.cat)}"></span>`:""}${esc(lab)}${d.parc?` · parcela ${d.parc}`:""}${d.fixo?" · fixa":""}${d.cartao?` · cartão, fatura de ${mesAb(d.fatura)}${d.pagoEm?(d.aPagar?` · adiantar em ${mesAb(d.pagoEm)}`:` · paga antes, em ${mesAb(d.pagoEm)}`):d.mes!==mesDe(d.data)?` (conta em ${mesAb(d.mes)})`:""}`:""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span>${d.divide?`<span class="m"><span class="pill ${d.divide.recebido?"g":"y"}" style="font-size:11.5px">${esc(d.divide.quem)} ${d.divide.recebido?"pagou":"vai pagar"} ${fm(d.divide.valor)} · total ${fm(d.valorTotal)}</span></span>`:""}${d.nota?`<span class="m nota">“${esc(d.nota)}”</span>`:""}</button>`; }).join("")}</div>`).join("")
       : `<div class="empty"><b>Nada por aqui</b>${E.busca||E.cat||E.tipo!=="todos"?"Nenhum lançamento com esses filtros.":"Lance o primeiro gasto na barra lá em cima: “50 gasolina”."}</div>`}
@@ -1642,11 +1689,15 @@ function viewAjustes(){
       <button class="btn-line" data-act="add:metas">Nova meta</button>
     </section>
   </div><div class="col">
-    <section class="panel"><div class="panel-h"><h2 style="--hc:var(--blue)">Orçamento mensal</h2><span class="note num" style="margin:0">${fm0(sum(C.cats.filter(c=>c.id!=="dizimo"),c=>+c.orc||0))}/mês</span></div>
+    ${modoFatura() ? `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--blue)">Categorias</h2></div>
+      <p class="note" style="margin-top:0">São só etiquetas automáticas para o app reconhecer os gastos. O que você acompanha são os itens do plano (Planejar). Renomeie ou apague à vontade.</p>
+      <div class="form-rows">${C.cats.map((c,i)=>c.id==="outros"?"":`<div class="frow" style="grid-template-columns:minmax(0,1fr) 34px"><input data-cfg="cats.${i}.nome" value="${esc(c.nome)}" aria-label="Nome da categoria"><button class="x" data-act="delCat:${c.id}" aria-label="Apagar categoria">✕</button></div>`).join("")}</div>
+    </section>` : `    <section class="panel"><div class="panel-h"><h2 style="--hc:var(--blue)">Orçamento mensal</h2><span class="note num" style="margin:0">${fm0(sum(C.cats.filter(c=>c.id!=="dizimo"),c=>+c.orc||0))}/mês</span></div>
       ${Object.keys(GRUPOS).map(g=>`<div class="grp"><div class="grp-h"><b>${GRUPOS[g]}</b></div><div class="form-rows">
         ${C.cats.map((c,i)=>c.grupo!==g?"":`<div class="frow" style="grid-template-columns:minmax(0,1fr) 110px 34px"><input data-cfg="cats.${i}.nome" value="${esc(c.nome)}" aria-label="Nome da categoria">${c.id==="dizimo"?`<span class="note" style="text-align:right;margin:0">automático</span>`:`<input class="n" data-cfg="cats.${i}.orc" data-num value="${c.orc?BRL.format(c.orc):""}" placeholder="0,00" inputmode="decimal" aria-label="Orçamento">`}<button class="x" data-act="delCat:${i}" aria-label="Remover categoria">✕</button></div>`).join("")}
         </div><button class="btn-line" data-act="addCat:${g}" style="margin-top:6px">Nova categoria</button></div>`).join("")}
     </section>
+`}
     <section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">O que o app aprendeu</h2></div>
       ${regras.length?`<table class="ledger">${regras.map(([k,v])=>`<tr><td>“${esc(k)}”</td><td>${esc(catNome(v))}</td><td><button class="x" style="border:0;background:none;color:var(--muted)" data-act="delRegra:${esc(k)}" aria-label="Esquecer">✕</button></td></tr>`).join("")}</table>`:`<p class="note">Quando você troca a categoria de um lançamento, o app grava a regra e acerta sozinho da próxima vez.</p>`}
     </section>
@@ -1714,7 +1765,9 @@ function folhaEditar(id){
       <label>Valor${d.divide?" total":""}<input name="valor" inputmode="decimal" value="${BRL.format(totalDe(d))}"></label>
       <label>Data<input name="data" type="date" value="${d.data}"></label>
       <label>Tipo<select name="tipo">${[["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["resgate","Resgatei"],["pagfatura","Pagamento de fatura"]].map(([v,n])=>`<option value="${v}" ${d.tipo===v?"selected":""}>${n}</option>`).join("")}</select></label>
-      <label>Categoria<select name="cat"><option value="">Sem categoria</option>${S.cfg.cats.map(c=>`<option value="${c.id}" ${d.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}<option value="__nova">＋ Nova categoria…</option></select></label>
+      ${d.tipo==="gasto" ? (()=>{ const its = itensDoMes(d.mes); const R0 = resumo(d.mes); const auto = R0.AT.de.get(id); const nmAuto = its.find(f=>f.id===auto)?.nome;
+        return `<label class="full">Entra no item do plano<select name="item"><option value="">${nmAuto?`Automático: ${esc(nmAuto)}`:"Automático: fora do plano"}</option>${its.map(f=>`<option value="${f.id}" ${d.item===f.id||(!d.item&&false)?"selected":""}>${esc(f.nome)}</option>`).join("")}<option value="__fora" ${d.item==="__fora"?"selected":""}>Fora do plano</option></select></label>`; })() : ""}
+      <label>Categoria <small style="color:var(--muted)">(automática)</small><select name="cat"><option value="">Sem categoria</option>${S.cfg.cats.map(c=>`<option value="${c.id}" ${d.cat===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}<option value="__nova">＋ Nova categoria…</option></select></label>
       ${metasOpts?`<label class="full">Meta (se for guardado)<select name="meta">${metasOpts}</select></label>`:""}
       <label><span><input type="checkbox" name="cartao" ${d.cartao?"checked":""}> No cartão de crédito</span></label>
       <label>Fatura que vence em<select name="fatura">${[-2,-1,0,1,2,3].map(k=>addMes(mesDe(d.data),k)).map(m=>`<option value="${m}" ${(d.fatura||faturaDe(d.data))===m?"selected":""}>${mesLongo(m)}</option>`).join("")}</select></label>
@@ -1725,7 +1778,7 @@ function folhaEditar(id){
         <p class="note" style="margin:6px 0 0">Só a sua parte entra no orçamento. O resto aparece em “A receber”.</p></div>
       <label class="full">Comentário<textarea name="nota" rows="2" placeholder="Ex.: jantar de aniversário, dividido com a Ana">${esc(d.nota||"")}</textarea></label>
     </div>
-    <label class="note" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" name="aprender" checked> Lembrar esta categoria para “${esc(keyOf(d.desc)||d.desc)}”</label>
+    <label class="note" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" name="aprender" checked> Lembrar item e categoria para “${esc(keyOf(d.desc)||d.desc)}”</label>
     <div class="sheet-foot">
       <button type="button" class="btn danger" data-act="apagar:${id}" id="delBtn">Apagar</button>
       ${d.grupo?`<button type="button" class="btn danger" data-act="apagarGrupo:${d.grupo}">Apagar parcelas</button>`:""}
@@ -2241,6 +2294,7 @@ async function acao(a, el){
     case "instalarApp": { $("#convApp")?.remove(); if (pedidoInstalar){ pedidoInstalar.prompt(); const r = await pedidoInstalar.userChoice.catch(()=>({})); lsSet("caderneta-instalar", r.outcome==="accepted" ? "feito" : "nao"); pedidoInstalar = null; }
       else toast(/iphone|ipad/i.test(navigator.userAgent) ? "No Safari: toque em Compartilhar e depois em “Adicionar à Tela de Início”." : "No Chrome: toque no menu ⋮ e depois em “Instalar app” ou “Adicionar à tela inicial”.", null, 8000); render(); return; }
     case "naoInstalar": $("#convApp")?.remove(); lsSet("caderneta-instalar","nao"); toast("Combinado, não pergunto mais. Se mudar de ideia, está em Ajustes."); return;
+    case "verItem": memo.get("itemAberto")===arg ? memo.delete("itemAberto") : memo.set("itemAberto", arg); render(); return;
     case "planVal": memo.set("fxPlan", arg); render(); setTimeout(()=>{ const i=$("#planVal"); i?.focus(); i?.select(); },0); return;
     case "confirmaPlanVal": { const v = parseValor($("#planVal")?.value||""); memo.delete("fxPlan"); ((S.cfg.planos ||= {})[m] ||= {})[arg] = v>0 ? v : 0; salvarCfg(true); render(); return; }
     case "editarGuardar": memo.set("fxGuardar", arg); render(); setTimeout(()=>{ const i=$("#guardVal"); i?.focus(); i?.select(); },0); return;
@@ -2328,6 +2382,9 @@ async function acao(a, el){
       salvarCfg(); return; }
     case "del": { const [k,i] = arg.split(":"); if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="?"; el.title="Toque de novo para remover"; setTimeout(()=>{ if(el.isConnected){ el.dataset.sure=""; el.textContent="✕"; } }, 2500); return; }
       S.cfg[k].splice(+i,1); salvarCfg(true); return; }
+    case "delCat": { if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="?"; el.title="Toque de novo para apagar"; setTimeout(()=>{ if(el.isConnected){ el.dataset.sure=""; el.textContent="✕"; } }, 2500); return; }
+      const c = catById(arg); if (!c) return; S.cfg.cats = S.cfg.cats.filter(x=>x.id!==arg); for (const k of Object.keys(S.cfg.regras||{})) if (S.cfg.regras[k]===arg) delete S.cfg.regras[k];
+      salvarCfg(true); toast(`Categoria “${c.nome}” apagada. Os gastos dela continuam nos itens do plano.`); return; }
     case "addCat": S.cfg.cats.push({id:"c"+uid(), nome:"Nova categoria", grupo:arg, orc:0}); salvarCfg(); return;
     case "delCat": { if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="?"; setTimeout(()=>{ if(el.isConnected){ el.dataset.sure=""; el.textContent="✕"; } }, 2500); return; }
       const c = S.cfg.cats[+arg]; if (c?.id==="outros"){ toast("“Outros” fica sempre"); return; } S.cfg.cats.splice(+arg,1); salvarCfg(true); return; }
@@ -2535,6 +2592,9 @@ Responda em português do Brasil, direto, com números exatos da fatura, em até
     else { nd.valor = total; delete nd.valorTotal; delete nd.divide; }
     const nota = String(fd.get("nota")||"").trim(); if (nota) nd.nota = nota.slice(0,300); else delete nd.nota;
     nd.revisar = nd.tipo==="gasto" && !nd.cat; nd.h = hashL(nd);
+    { const it = fd.get("item"); if (nd.tipo==="gasto" && it){ nd.item = it; const f = (S.cfg.fixos||[]).find(x=>x.id===it);
+        if (fd.get("aprender")){ const k = keyOf(nd.desc); if (k){ (S.cfg.regrasItem ||= {})[k] = it==="__fora" ? "__fora" : (f && !f.soMes ? f.id : norm(f?.nome||"")); salvarCfg(); } } }
+      else if (it==="" && d.item) delete nd.item; }
     if (fd.get("aprender") && nd.tipo==="gasto" && nd.cat){ const k = keyOf(nd.desc); if (k && S.cfg.regras[k]!==nd.cat){ S.cfg.regras[k] = nd.cat; salvarCfg();
       // aplica a regra aos outros lançamentos sem categoria com a mesma chave
       for (const [oid,od] of S.lanc) if (oid!==id && od.revisar && keyOf(od.desc)===k) gravarLanc(oid, Object.assign({}, od, {cat:nd.cat, revisar:false})); } }
