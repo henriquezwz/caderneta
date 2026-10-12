@@ -449,6 +449,19 @@ main{max-width:1120px;margin:18px auto 0}
 .an-sec h4{margin:0 0 8px;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .an-linha{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:4px 0}
 .an-linha b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.an-sec h4 small{text-transform:none;letter-spacing:0;font-weight:500}
+.an-det summary{list-style:none;cursor:pointer;border-radius:8px}
+.an-det summary::-webkit-details-marker{display:none}
+.an-det summary .an-linha{display:grid;grid-template-columns:minmax(0,1fr) auto 14px;align-items:baseline}
+.an-det summary:hover{background:var(--sunk)}
+.an-det summary .hbar{grid-template-columns:minmax(90px,150px) minmax(0,1fr) auto 14px}
+.an-det summary .hbar::after,.an-det summary .an-linha::after{content:"›";color:var(--muted);transition:transform .15s;display:inline-block}
+.an-det[open] summary .hbar::after,.an-det[open] summary .an-linha::after{transform:rotate(90deg)}
+.an-itens{margin:2px 0 10px 8px;border-left:3px solid var(--line);padding-left:10px}
+.an-item{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:8px;font-size:13.5px;padding:4px 0;align-items:baseline}
+.an-item .dt{color:var(--muted);font-variant-numeric:tabular-nums}
+.an-item small{color:var(--muted);display:block}
+.an-item b{font-variant-numeric:tabular-nums;white-space:nowrap}
 .dica{display:grid;gap:2px;background:var(--mint-soft);border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13.5px}
 .dica.warn{background:var(--amber-soft)}
 .dica span{color:var(--muted)}
@@ -962,7 +975,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 15:00";
+const VERSAO = "12/10 15:10";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1445,7 +1458,10 @@ function folhaAnalise(itens, venc, doLote){
   if (parcelas.length) dicas.push({t:`${parcelas.length} parcelas nesta fatura: ${fm0(sum(parcelas,x=>x.minha))}`, d:`Elas continuam nos próximos meses. Antes de parcelar algo novo, veja quanto já está comprometido na tela do Mês.`});
   for (const [k,v] of cats){ const c = catById(k); if (!c || !(+c.orc)) continue; const m = Object.keys(porConta)[0]; if (v > +c.orc) dicas.push({t:`${c.nome} passou do orçamento`, d:`Só nesta fatura foram ${fm0(v)}, para um previsto de ${fm0(c.orc)} no mês.`}); }
   memo.set("analise", {itens, venc, stats:{total, minha, receber, pago, porConta, cats, comidaT, delivT, delivN:deliv.length, mercT, saidT, sems:sems.map(k=>[k,porSem[k]]), topLojas, pequenosT, pequenosN:pequenos.length, assinT}, doLote});
-  const barra = (lbl, v, mx, cor) => `<div class="hbar" style="--cc:${cor}"><span>${esc(lbl)}</span><span class="t"><i style="width:${(v/mx*100).toFixed(1)}%"></i></span><span class="num">${fm0(v)}</span></div>`;
+  const listaItens = L => `<div class="an-itens">${L.slice().sort((a,b)=>a.data<b.data?-1:1).map(x=>`<div class="an-item"><span class="dt">${x.data.slice(8)}/${x.data.slice(5,7)}</span><span class="ds">${esc(x.desc)}${x.parcInfo?` <small>parcela ${esc(x.parcInfo)}</small>`:""}${x.nota?` <small>“${esc(x.nota)}”</small>`:""}${x.divide?` <small>${esc(x.divide.quem||"alguém")} paga ${fm0(x.divide.valor)}</small>`:""}</span><b>${fm(x.minha)}</b></div>`).join("")}</div>`;
+  const barra = (lbl, v, mx, cor, L) => { const b = `<div class="hbar" style="--cc:${cor}"><span>${esc(lbl)}</span><span class="t"><i style="width:${(v/mx*100).toFixed(1)}%"></i></span><span class="num">${fm0(v)}</span></div>`;
+    return L && L.length ? `<details class="an-det"><summary>${b}</summary>${listaItens(L)}</details>` : b; };
+  const linhaDet = (lbl, v, L) => L.length ? `<details class="an-det"><summary><div class="an-linha"><span>${lbl}</span><b>${fm(v)}</b></div></summary>${listaItens(L)}</details>` : `<div class="an-linha"><span>${lbl}</span><b>${fm(v)}</b></div>`;
   abrirFolha(`<h3>Análise da fatura${venc?` de ${mesLongo(venc)}`:""}</h3><p class="lead">${G.length} compras${P.length?` · ${P.length} pagamento(s)`:""}.</p>
     <div class="an-kpis">
       <div><dt>Total</dt><dd>${fm0(total)}</dd></div>
@@ -1456,12 +1472,12 @@ function folhaAnalise(itens, venc, doLote){
     <div class="an-sec"><h4>Em que mês cada parte pesa</h4>${Object.keys(porConta).sort().map(m=>`<div class="an-linha"><span>${mesLongo(m)}</span><b>${fm(porConta[m])}</b></div>`).join("")}
       <p class="note">Comida e dia a dia pesam no mês em que você comprou; parcelas e compras maiores, no mês da fatura.</p></div>
     <div class="an-sec"><h4>Comida</h4>
-      <div class="an-linha"><span>Mercado</span><b>${fm(mercT)}</b></div>
-      <div class="an-linha"><span>Delivery${deliv.length?` · ${deliv.length} pedidos`:""}</span><b>${fm(delivT)}</b></div>
-      <div class="an-linha"><span>Saídas (restaurante, lanche, bar)</span><b>${fm(saidT)}</b></div></div>
-    <div class="an-sec"><h4>Por categoria</h4>${cats.map(([k,v])=>barra(k==="__sem"?"Sem categoria":catNome(k), v, mxC, corCat(k==="__sem"?null:k))).join("")}</div>
-    ${sems.length>1?`<div class="an-sec"><h4>Por semana da compra</h4>${sems.map(k=>barra("semana de "+k.slice(8)+"/"+k.slice(5,7), porSem[k], mxS, "var(--blue)")).join("")}</div>`:""}
-    <div class="an-sec"><h4>Onde mais foi dinheiro</h4>${topLojas.map(l=>`<div class="an-linha"><span>${esc(l.nome)}${l.n>1?` · ${l.n}×`:""}</span><b>${fm(l.t)}</b></div>`).join("")}</div>
+      ${linhaDet("Mercado", mercT, merc)}
+      ${linhaDet(`Delivery${deliv.length?` · ${deliv.length} pedidos`:""}`, delivT, deliv)}
+      ${linhaDet("Saídas (restaurante, lanche, bar)", saidT, said)}</div>
+    <div class="an-sec"><h4>Por categoria <small>· toque para ver as compras</small></h4>${cats.map(([k,v])=>barra(k==="__sem"?"Sem categoria":catNome(k), v, mxC, corCat(k==="__sem"?null:k), G.filter(x=>(x.cat||"__sem")===k))).join("")}</div>
+    ${sems.length>1?`<div class="an-sec"><h4>Por semana da compra</h4>${sems.map(k=>barra("semana de "+k.slice(8)+"/"+k.slice(5,7), porSem[k], mxS, "var(--blue)", G.filter(x=>semana(x.data)===k))).join("")}</div>`:""}
+    <div class="an-sec"><h4>Onde mais foi dinheiro</h4>${topLojas.map(l=>linhaDet(`${esc(l.nome)}${l.n>1?` · ${l.n}×`:""}`, l.t, G.filter(x=>(keyOf(x.desc)||x.desc)===(keyOf(l.nome)||l.nome)))).join("")}</div>
     <div class="an-sec"><h4>Dá para economizar</h4>${dicas.length?dicas.map(x=>`<div class="dica"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div>`).join(""):`<p class="note">Nada fora do padrão nesta fatura.</p>`}</div>
     ${G.some(x=>x.nota||x.divide)?`<div class="an-sec"><h4>Seus comentários</h4>${G.filter(x=>x.nota||x.divide).map(x=>`<div class="an-linha"><span>${esc(x.desc)}${x.nota?` — “${esc(x.nota)}”`:""}${x.divide?` · ${esc(x.divide.quem||"alguém")} paga ${fm0(x.divide.valor)}`:""}</span><b>${fm(x.minha)}</b></div>`).join("")}</div>`:""}
     <div class="an-sec" id="iaBox">${S.ai?`<button type="button" class="btn" data-act="iaAnalise">Pedir uma análise mais detalhada à IA</button>`:`<p class="note">Entre na sua conta para pedir uma análise mais detalhada à IA.</p>`}</div>
