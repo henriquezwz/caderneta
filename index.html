@@ -470,6 +470,11 @@ main{max-width:1120px;margin:18px auto 0}
 .dica.eco em{font-style:normal;font-weight:700;color:var(--mint);font-size:13px}
 .dica b .pill{font-size:10.5px;padding:1px 7px;margin-left:4px}
 .ia-cat span{font-size:13.5px}
+.fb-cot{margin-top:10px;padding-top:10px;border-top:1px dashed color-mix(in srgb,var(--violet) 30%,transparent);display:grid;gap:6px;font-size:13.5px}
+.fb-cot .pill{background:var(--surface)}
+.sugbox{display:grid;gap:3px;background:var(--surface);border-radius:10px;padding:9px 11px;border:1.5px solid color-mix(in srgb,var(--violet) 40%,var(--line))}
+.sugbox span{color:var(--muted);font-size:13px}
+.lc-sug{background:var(--violet);color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:700}
 .lote-lista{display:grid;gap:8px}
 .lc{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
 .lc.pago{border-color:color-mix(in srgb,var(--violet) 45%,var(--line));background:var(--violet-soft)}
@@ -1096,7 +1101,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 17:20";
+const VERSAO = "12/10 17:35";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1595,6 +1600,22 @@ function acharDuplicado(r){
   }
   return null;
 }
+const TIPO_COTIDIANO = c => ["mercado","delivery","saidas"].includes(c) ? "comida" : c==="transporte" ? "gasolina e transporte" : ["diaadia","pet","saude","cuidados","futebol"].includes(c) ? "dia a dia" : null;
+function candidatosPagos(rows){
+  const atual = mesDe(hoje());
+  return rows.filter(r => r.cartao && r.tipo==="gasto" && r._on && TIPO_COTIDIANO(r.cat) && mesDe(r.data) < atual);
+}
+function sugerirPagos(rows, alvo){
+  rows.forEach(r => { if (r._sug){ r.pago = false; r._sug = false; } });
+  let cand = candidatosPagos(rows).filter(r => !r.pago).sort((a,b)=>a.data<b.data?-1:1);
+  const escolhidos = [];
+  if (alvo > 0){ let soma = 0; for (const r of cand){ if (soma + (+r.valor||0) <= alvo + 0.01){ escolhidos.push(r); soma += +r.valor||0; } } }
+  else escolhidos.push(...cand);
+  escolhidos.forEach(r => { r.pago = true; r._sug = true; });
+  const por = {}; escolhidos.forEach(r => { const k = TIPO_COTIDIANO(r.cat); por[k] = (por[k]||0) + (+r.valor||0); });
+  memo.set("sugPago", {n: escolhidos.length, total: sum(escolhidos, r=>+r.valor||0), por});
+  return escolhidos.length;
+}
 function estadoLinha(r){ return r._dupId && !r._on ? "existe" : !r._on ? "fora" : (r.cartao && r.tipo==="gasto" && r.pago) ? "pago" : "lancar"; }
 function folhaLote(rows, titulo, nota, venc, manter){
   if (!manter){
@@ -1605,6 +1626,7 @@ function folhaLote(rows, titulo, nota, venc, manter){
   if (ehFatura){
     if (!venc){ const cont = {}; rows.filter(r=>r.cartao).forEach(r=>{ const f = faturaDe(r.data); cont[f]=(cont[f]||0)+1; }); venc = Object.entries(cont).sort((a,b)=>b[1]-a[1])[0]?.[0] || addMes(mesDe(hoje()),1); }
     rows.forEach(r=>{ if (r.cartao || r.tipo==="pagfatura") r.fatura = venc; });
+    if (!manter){ memo.delete("sugPago"); sugerirPagos(rows, 0); }
   }
   memo.set("lote", rows); memo.set("loteVenc", venc||null); memo.set("loteTitulo", titulo); memo.set("loteNota", nota||null);
   const catOpt = v => `<option value="">Sem categoria</option>`+S.cfg.cats.map(c=>`<option value="${c.id}" ${v===c.id?"selected":""}>${esc(c.nome)}</option>`).join("");
@@ -1615,6 +1637,10 @@ function folhaLote(rows, titulo, nota, venc, manter){
   abrirFolha(`<h3>${esc(titulo)}</h3><p class="lead">${esc(nota||"Para cada compra, escolha: Lançar, Já paguei ou Não lançar. Toque na compra para editar.")}</p>
     ${ehFatura ? `<div class="fatbox">
         <label>Fatura do cartão que vence em <select id="loteVenc">${opcoesVenc.map(m=>`<option value="${m}" ${m===venc?"selected":""}>${mesLongo(m)}</option>`).join("")}</select></label>
+        ${(()=>{ const sp = memo.get("sugPago"); const tot = {}; rows.filter(r=>r.cartao && r.tipo==="gasto" && (r._on||r._dupId)).forEach(r=>{ const k = TIPO_COTIDIANO(r.cat) || "outras compras"; tot[k]=(tot[k]||0)+(+r.valor||0); });
+          return `<div class="fb-cot"><b>O que tem nesta fatura</b><div>${Object.entries(tot).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span class="pill">${esc(k)} ${fm0(v)}</span>`).join(" ")}</div>
+          ${sp && sp.n ? `<div class="sugbox"><b>Sugestão: marquei ${sp.n} ${sp.n>1?"compras":"compra"} como “Já paguei” (${fm(sp.total)})</b><span>São compras do dia a dia de meses anteriores: ${Object.entries(sp.por).map(([k,v])=>`${k} ${fm0(v)}`).join(", ")}. Revise as marcadas com <i>sugestão</i>.</span><div class="btns" style="margin:4px 0 0"><button type="button" class="btn" data-act="desfazerSug">Desfazer sugestão</button></div></div>`
+            : `<div class="btns" style="margin:6px 0 0"><button type="button" class="btn" data-act="refazerSug">Sugerir o que já foi pago</button></div>`}</div>`; })()}
         <div class="fb-pago"><b>Já adiantou parte desta fatura?</b>
           <label>Quanto falta pagar no banco? <input id="loteFalta" inputmode="decimal" placeholder="ex.: 2.167,00" value="${esc(memo.get("loteFalta")||"")}"></label>
           <div id="loteAlvo" class="note"></div>
@@ -1627,7 +1653,7 @@ function folhaLote(rows, titulo, nota, venc, manter){
       const opts = [["lancar","Lançar"], ...((r.cartao && r.tipo==="gasto") ? [["pago","Já paguei"]] : []), [r._dupId?"existe":"fora", r._dupId?"Já está no app":"Não lançar"]];
       return `<div class="lc ${st}" data-lc="${i}">
         <div class="lc-top" data-act="loteAbrir:${i}"><span class="lc-dt">${r.data.slice(8)}/${r.data.slice(5,7)}</span><span class="lc-ds">${esc(r.desc)}${ex?`<small>já lançado como “${esc(ex.desc)}” em ${ex.data.slice(8)}/${ex.data.slice(5,7)}</small>`:""}</span><b class="lc-v">${fm(r.valor)}</b></div>
-        <div class="lc-meta"><span class="dot" style="--cc:${corCat(r.cat)}"></span>${esc(r.tipo==="gasto"?catNome(r.cat):(tipos.find(t=>t[0]===r.tipo)||[])[1]||r.tipo)}${r.parcInfo?` · parcela ${esc(r.parcInfo)}`:""}${ehFatura?` · <span data-contaem="${i}">${contaEmTxt(r)}</span>`:""}${(r.nota||+r.parte)?` · <span class="lc-tag">${+r.parte?`${esc(r.quem||"alguém")} paga ${fm0(r.parte)}`:"comentário"}</span>`:""}</div>
+        <div class="lc-meta"><span class="dot" style="--cc:${corCat(r.cat)}"></span>${esc(r.tipo==="gasto"?catNome(r.cat):(tipos.find(t=>t[0]===r.tipo)||[])[1]||r.tipo)}${r.parcInfo?` · parcela ${esc(r.parcInfo)}`:""}${ehFatura?` · <span data-contaem="${i}">${contaEmTxt(r)}</span>`:""}${r._sug && r.pago?` · <span class="lc-sug">sugestão</span>`:""}${(r.nota||+r.parte)?` · <span class="lc-tag">${+r.parte?`${esc(r.quem||"alguém")} paga ${fm0(r.parte)}`:"comentário"}</span>`:""}</div>
         <div class="lc-seg" role="group" aria-label="O que fazer">${opts.map(([v,n])=>`<button type="button" data-act="estado:${i}:${v}" aria-pressed="${st===v}">${n}</button>`).join("")}</div>
         <div class="lc-edit" data-edit-lote="${i}" hidden>
           <label>Descrição<input type="text" data-lote="${i}.desc" value="${esc(r.desc)}"></label>
@@ -2089,16 +2115,20 @@ async function acao(a, el){
     case "abrirImport": folhaColar(); return;
     case "estado": { const [i, v] = arg.split(":"); const rows = memo.get("lote"); const r = rows[+i]; if (!r) return;
       if (v==="lancar"){ r._on = true; r.pago = false; } else if (v==="pago"){ r._on = true; r.pago = true; } else { r._on = false; r.pago = false; }
-      const card = document.querySelector(`[data-lc="${i}"]`);
+      r._sug = false; const card = document.querySelector(`[data-lc="${i}"]`);
       if (card){ const st = estadoLinha(r); card.classList.remove("lancar","pago","fora","existe"); card.classList.add(st);
         card.querySelectorAll(".lc-seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.act.endsWith(":"+st))));
-        const c = card.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); }
+        const c = card.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); card.querySelector(".lc-sug")?.remove(); }
       const b = $("#loteBtn"); if (b) b.textContent = rotuloLote(); resumoLote(); alvoLote(); return; }
     case "loteAbrir": { const ed = document.querySelector(`[data-edit-lote="${arg}"]`); if (ed){ const abrir = ed.hidden; if (!abrir){ folhaLote(memo.get("lote"), memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); return; } ed.hidden = false; ed.querySelector("input")?.focus(); } return; }
-    case "loteEhFatura": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r.tipo==="gasto") r.cartao = true; }); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), null, true); return; }
+    case "desfazerSug": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r._sug){ r.pago = false; r._sug = false; } }); memo.set("sugPago", {n:0,total:0,por:{}}); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); return; }
+    case "refazerSug": { const rows = memo.get("lote"); const n = sugerirPagos(rows, memo.get("loteAlvoValor")||0); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); if (!n) toast("Não achei compras do dia a dia de meses anteriores nesta fatura."); return; }
+    case "loteEhFatura": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r.tipo==="gasto") r.cartao = true; }); sugerirPagos(rows, 0); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), null, true); return; }
     case "lotePagasAuto": { const rows = memo.get("lote"); const alvo = memo.get("loteAlvoValor")||0; let soma = 0;
-      rows.forEach(r=>{ if (r.cartao && r.tipo==="gasto" && r._on) r.pago = false; });
-      for (const r of rows.filter(r=>r.cartao && r.tipo==="gasto" && r._on).sort((a,b)=>a.data<b.data?-1:1)){ if (soma + (+r.valor||0) <= alvo + 0.01){ r.pago = true; soma += +r.valor||0; } }
+      rows.forEach(r=>{ if (r.cartao && r.tipo==="gasto" && r._on){ r.pago = false; r._sug = false; } });
+      const atualM = mesDe(hoje()); const prio = r => (TIPO_COTIDIANO(r.cat) && mesDe(r.data) < atualM) ? 0 : 1;
+      for (const r of rows.filter(r=>r.cartao && r.tipo==="gasto" && r._on).sort((a,b)=>(prio(a)-prio(b)) || (a.data<b.data?-1:1))){ if (soma + (+r.valor||0) <= alvo + 0.01){ r.pago = true; r._sug = true; soma += +r.valor||0; } }
+      const por = {}; rows.filter(r=>r._sug).forEach(r=>{ const k = TIPO_COTIDIANO(r.cat)||"outras compras"; por[k]=(por[k]||0)+(+r.valor||0); }); memo.set("sugPago", {n: rows.filter(r=>r._sug).length, total: soma, por});
       folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true);
       toast(Math.abs(soma-alvo)<0.5 ? `Marquei ${fm(soma)} como já pago. Bateu com o banco.` : `Marquei ${fm(soma)} das compras mais antigas. Faltam ${fm(alvo-soma)} para bater: ajuste à mão.`, null, 6000); return; }
     case "acertarFatura": folhaPagas(arg); return;
