@@ -1101,7 +1101,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 17:35";
+const VERSAO = "12/10 17:45";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -2114,6 +2114,11 @@ async function acao(a, el){
       toast(`${rows.length} lançamentos adicionados${ligados?` · ${ligados} já existentes ligados à fatura`:""}`, async()=>{ for (const id of all) await apagarLanc(id); toast("Desfeito"); }); return; }
     case "abrirImport": folhaColar(); return;
     case "estado": { const [i, v] = arg.split(":"); const rows = memo.get("lote"); const r = rows[+i]; if (!r) return;
+      if (v==="pago" && !r.pago && ($("#loteFalta")?.value||"").trim()){
+        const alvo = memo.get("loteAlvoValor")||0; const marcado = sum(rows.filter(x=>x.cartao && x.tipo==="gasto" && x._on && x.pago), x=>+x.valor||0);
+        const resta = r2(alvo - marcado);
+        if ((+r.valor||0) > resta + 0.5){ toast(resta > 0.5 ? `Passaria do que você já pagou (${fm(alvo)}). Só falta marcar ${fm(resta)}: escolha uma compra de até esse valor ou desmarque outra.` : `Você já marcou tudo o que pagou (${fm(alvo)}). Desmarque outra compra antes.`, null, 7000); return; }
+      }
       if (v==="lancar"){ r._on = true; r.pago = false; } else if (v==="pago"){ r._on = true; r.pago = true; } else { r._on = false; r.pago = false; }
       r._sug = false; const card = document.querySelector(`[data-lc="${i}"]`);
       if (card){ const st = estadoLinha(r); card.classList.remove("lancar","pago","fora","existe"); card.classList.add(st);
@@ -2226,7 +2231,10 @@ $("#fileIn").onchange = async e=>{ const f = e.target.files[0]; e.target.value="
 document.addEventListener("input", e=>{
   const t = e.target;
   if (t.id==="busca"){ S.ext.busca = t.value; render(); return; }
-  if (t.dataset.pg!==undefined){ const r = (memo.get("pagas")||[])[+t.dataset.pg]; if (r){ r.on = t.checked; atualizarPagas(); } return; }
+  if (t.dataset.pg!==undefined){ const rows = memo.get("pagas")||[]; const r = rows[+t.dataset.pg]; if (!r) return;
+    if (t.checked && ($("#faltaBanco")?.value||"").trim()){ const alvo = parseValor($("#alvoPago")?.value||"")||0; const marcado = sum(rows.filter(x=>x.on), x=>x.total);
+      if (r.total > alvo - marcado + 0.5){ t.checked = false; toast(alvo - marcado > 0.5 ? `Passaria do que você já pagou. Só falta marcar ${fm(alvo-marcado)}.` : `Você já marcou tudo o que pagou (${fm(alvo)}).`, null, 6000); return; } }
+    r.on = t.checked; atualizarPagas(); return; }
   if (t.id==="faltaBanco"){ memo.set("faltaBanco", t.value); atualizarPagas(); return; }
   if (t.id==="pagasMes"){ memo.set("pagasMes", t.value); return; }
   if (t.dataset.lote && t.dataset.lote.endsWith(".pago")){ const r = memo.get("lote")[+t.dataset.lote.split(".")[0]]; r.pago = t.checked; const c = document.querySelector(`[data-contaem="${t.dataset.lote.split(".")[0]}"]`); if (c) c.innerHTML = contaEmTxt(r); resumoLote(); return; }
@@ -2239,6 +2247,11 @@ document.addEventListener("input", e=>{
 document.addEventListener("change", e=>{
   const t = e.target;
   if (t.id==="fCat"){ S.ext.cat = t.value; render(); return; }
+  if (t.id==="loteFalta"){ memo.set("loteFalta", t.value); alvoLote(); const rows = memo.get("lote")||[]; const alvo = memo.get("loteAlvoValor")||0;
+    const marcado = sum(rows.filter(x=>x.cartao && x.tipo==="gasto" && x._on && x.pago), x=>+x.valor||0);
+    if (t.value.trim() && marcado > alvo + 0.5){ rows.forEach(x=>{ if (x.pago){ x.pago = false; x._sug = false; } }); if (alvo > 0.5) sugerirPagos(rows, alvo); else memo.set("sugPago", {n:0,total:0,por:{}});
+      folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); toast(`Ajustei as marcações para não passar de ${fm(Math.max(0,alvo))} já pagos.`, null, 6000); }
+    return; }
   if (t.dataset.lote || t.id==="loteVenc" || t.id==="lotePagoMes" || t.id==="pagasMes"){ t.dispatchEvent(new Event("input",{bubbles:true})); return; }
   if (t.dataset.cfg){
     const path = t.dataset.cfg.split("."); let o = S.cfg; for (let i=0;i<path.length-1;i++) o = o[path[i]] ||= {};
