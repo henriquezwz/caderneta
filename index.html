@@ -697,7 +697,7 @@ function somarContas(t){
 const temNumero = s => /\d/.test(s.replace(/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/g,"").replace(/\b\d{1,2}\s*[x×]/gi,""));
 function dividirFrase(line){
   let t = somarContas(line.trim());
-  // "recebi 1200, sendo 700 do genoma e 500 do sesi"
+  // "recebi 1200, sendo 700 de uma fonte e 500 de outra"
   const sm = t.match(/^(.*?)(?:,\s*)?\b(?:sendo|dos quais|das quais|divididos? em|que (?:foi|foram)|assim:|:)\s+(.+)$/i);
   let blocos = [t];
   if (sm && temNumero(sm[1]) && temNumero(sm[2])){
