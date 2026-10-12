@@ -474,6 +474,9 @@ main{max-width:1120px;margin:18px auto 0}
 .fb-cot .pill{background:var(--surface)}
 .sugbox{display:grid;gap:3px;background:var(--surface);border-radius:10px;padding:9px 11px;border:1.5px solid color-mix(in srgb,var(--violet) 40%,var(--line))}
 .sugbox span{color:var(--muted);font-size:13px}
+.lc-ia{color:var(--violet);font-weight:800}
+.adiantar{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;background:var(--tang-soft,#FFE9DA);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:13.5px}
+.sugbox.futura{background:var(--blue-soft)}
 .lc-sug{background:var(--violet);color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:700}
 .lote-lista{display:grid;gap:8px}
 .lc{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
@@ -622,7 +625,7 @@ const mesAb = m => MES[+m.slice(5)-1]+"/"+m.slice(2,4);
 const diaSemana = d => new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"short"});
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
-const keyOf = s => norm(s).replace(/[^a-z ]/g," ").split(/\s+/).filter(w=>w.length>1 && !["de","do","da","no","na","em","pix","compra","pagamento"].includes(w)).slice(0,2).join(" ");
+const keyOf = s => (typeof limpaLoja==="function" ? limpaLoja(s) : norm(s)).replace(/[^a-z ]/g," ").split(/\s+/).filter(w=>w.length>1 && !["de","do","da","no","na","em","pix","compra","pagamento"].includes(w)).slice(0,2).join(" ");
 const titulo = s => String(s||"").trim().replace(/\s+/g," ").toLowerCase().replace(/(^|\s)(\S)/g,(a,b,c)=>b+c.toUpperCase());
 const sum = (a,f) => a.reduce((t,x)=>t+(f?f(x):x),0);
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -665,24 +668,27 @@ const CFG_PADRAO = {
 };
 const COMPRA_PADRAO = ["mercado","delivery","saidas","diaadia","transporte","pet","futebol","cuidados","saude"];
 const PALAVRAS = [
-  ["dizimo",/dizimo|igreja|oferta/],
-  ["streaming",/spotify|netflix|hbo|\bmax\b|prime video|amazon prime|disney|youtube|google one|icloud|apple\.com|deezer|globoplay|chatgpt|claude/],
-  ["jogos",/game ?pass|xbox|steam|eneba|playstation|\bpsn\b|nuuvem|nintendo/],
-  ["delivery",/ifood|rappi|99 ?food|aiqfome|ze delivery/],
-  ["mercado",/mercado(?! ?livre| ?pago)|supermerc|bigmais|big mais|coelho diniz|atacad|assai|padaria|acougue|hortifruti|sacolao|carrefour|bretas|epa\b|compras pt/],
-  ["transporte",/posto|ipiranga|shell|petrobras|br mania|gasolina|combust|\b99\b|99app|99 app|uber|pedagio|estacion|moto|oleo|seguro|auto ?pecas|ale\b|sem parar|veloe/],
-  ["saude",/farmacia|drogaria|droga|raia|pacheco|rd saude|araujo|medic|clinica|dentista|dente|laborat|academia|totalpass|smart ?fit|remedio|colirio|exame/],
-  ["pet",/racao|pet|veterin|reino animal|cobasi|petz/],
-  ["moradia",/aluguel|energia|cemig|copasa|saae|agua|internet|claro|vivo|\btim\b|galao|\bgas\b|condominio/],
-  ["saidas",/\bbar\b|restaurante|pizza|lanche|burger|hamburg|acai|sorvet|cinema|ingresso|show|chopp|churras|lanchonete|cafe|boteco|saida/],
-  ["futebol",/futebol|quadra|society|camisa fut|pelada/],
-  ["compras",/amazon|shopee|mercado ?livre|magalu|americanas|shein|aliexpress|renner|riachuelo|c&a|centauro|netshoes|tenis|roupa|mochila/],
-  ["cuidados",/cabelo|barbearia|barbeiro|salao|perfum|boticario|natura/],
-  ["presentes",/presente|amigo oculto/],
-  ["viagem",/airbnb|hotel|booking|passagem|rodoviaria|latam|\bgol\b|azul|viagem/],
-  ["estudos",/livro|curso|grancursos|faculdade|udemy|estrategia|imposto|\bir\b|darf|ipva|iptu/],
-  ["diaadia",/dia a dia|papelaria|recarga|credito celular/]
+  ["dizimo",/dizimo|igreja|oferta|paroquia/],
+  ["streaming",/spotify|netflix|\bhbo\b|\bmax\b|prime ?video|amazon ?prime|disney|star ?\+|paramount|youtube|google|icloud|apple ?\.? ?com|itunes|deezer|globoplay|telecine|crunchyroll|\bmubi\b|chatgpt|openai|\bclaude\b|anthropic|canva|notion|dropbox|microsoft|office ?365|adobe|duolingo|tinder|bumble|kindle|audible|tidal|twitch|patreon|apple music|nubank ?ultravioleta/],
+  ["jogos",/game ?pass|xbox|steam|eneba|playstation|\bpsn\b|sony interactive|nuuvem|nintendo|epic ?games|riot|valorant|garena|free ?fire|roblox|blizzard|battle ?net|electronic arts|\bea games|ubisoft|rockstar|\bg2a\b|razer gold|codashop|levelup|green man/],
+  ["delivery",/ifood|\bifd\b|rappi|99 ?food|aiqfome|ze ?delivery|james delivery|\bdaki\b|uber ?eats|keeta|anota ?ai|goomer|delivery/],
+  ["viagem",/airbnb|hotel|pousada|hostel|booking|decolar|123 ?milhas|\bhurb\b|maxmilhas|passagem|rodoviaria|latam|\bgol\b|voe ?azul|azul linhas|smiles|localiza|movida|unidas|aluguel de carro|aeroporto|viagem|resort|trivago|expedia|buser|clickbus/],
+  ["mercado",/mercado(?! ?livre| ?pago)|supermerc|hipermerc|mercearia|atacad|atacarejo|assai|carrefour|big ?mais|coelho diniz|bretas|\bepa\b|super ?nosso|verdemar|mart ?minas|villefort|apoio mineiro|sacolao|hortifrut|\bhorti|padaria|panific|acougue|casa de carnes|frigorific|emporio|quitanda|\bfeira\b|sams? club|makro|tenda atac|fort atac|savegnago|zaffari|guanabara|prezunic|st marche|pao de acucar|\bextra\b|hirota|condor|muffato|angeloni|giassi|gbarbosa|comper|costco|\bsonda\b|dalben|covabra|bistek|rede economia|compras pt|minimercado|mini mercado|distribuidora de bebidas|hortifruti|laticinio|peixaria|avicola|granja/],
+  ["transporte",/posto|ipiranga|\bshell\b|petrobras|br mania|\bale\b|raizen|gasolina|combustiv|etanol|\bdiesel\b|\bgnv\b|\buber\b|\b99\b|99 ?app|99 ?pop|99 ?taxi|cabify|in ?driver|\btaxi\b|pedagio|estacion|estapar|zona azul|parking|\bmoto\b|mototaxi|oficina|mecanic|borrachar|\bpneu|lava ?jato|auto ?pecas|autopecas|\boleo|seguro|sem parar|veloe|conectcar|taggy|move mais|\bmetro\b|onibus|bilhete unico|bhbus|detran|licenciamento|multa/],
+  ["saude",/farmacia|drogaria|droga|\braia\b|pacheco|rd saude|araujo|pague menos|panvel|nissei|venancio|extrafarma|ultrafarma|drogal|medic|clinica|hospital|consulta|dentista|odonto|\bdente|laborat|pardini|fleury|sabin|academia|totalpass|gympass|wellhub|smart ?fit|bluefit|bodytech|selfit|remedio|colirio|exame|unimed|hapvida|\bamil\b|sulamerica|psicolog|fisioter|nutricion|\botica|oculos/],
+  ["pet",/racao|\bpet|veterin|\bvet\b|reino animal|cobasi|petz|petlove|agropecuar|banho e tosa|\bzoe\b/],
+  ["moradia",/aluguel|energia|cemig|copasa|saae|\bagua\b|internet|\bclaro\b|\bvivo\b|\btim\b|\boi fibra|net virtua|\bsky\b|galao|\bgas\b|ultragaz|liquigas|supergasbras|condominio|\benel\b|cpfl|celesc|copel|neoenergia|equatorial|energisa|sabesp|cedae|embasa|compesa|sanepar|brisanet|algar|leroy|telhanorte|material de constru|madeireira|ferrag|eletrica|tok ?stok|camicado|mobly/],
+  ["saidas",/\bbar\b|\bbares\b|restaurante|\brest\b|pizza|lanche|burger|burguer|hamburg|mc ?donald|\bbk\b|subway|habib|giraffas|outback|madero|coco bambu|spoleto|china in box|\bbobs\b|\bkfc\b|popeyes|starbucks|cacau show|kopenhagen|chocolat|acai|sorvet|gelato|cinema|cinemark|cinepolis|ingresso|sympla|eventim|ticket|\bshow|chopp|cervej|choperia|churras|espetinho|lanchonete|\bcafe|boteco|botequim|saida|petisc|pastel|esfiha|sushi|temaki|japones|cantina|bistro|grill|steak|food|trattoria|tapioca|crepe|doceria|confeitaria|brigadeir|\bbolo|salgad|coxinha|quiosque|adega|\bbeer|\bpub\b|balada|boate|espetaria|petiscaria|rodizio|self service|marmit|quentinha|comida/],
+  ["futebol",/futebol|quadra|society|camisa fut|pelada|futsal|soccer/],
+  ["cuidados",/cabelo|cabeleir|barbearia|barbeiro|barber|salao|manicure|esmalteria|estetica|depila|sobrancelha|perfum|boticario|\bnatura\b|eudora|\bavon\b|sephora|berenice|jequiti|cosmetic|beleza|beauty/],
+  ["presentes",/presente|amigo oculto|\bgift|floricultura|\bflores\b/],
+  ["estudos",/livro|livraria|saraiva|curso|grancursos|gran cursos|faculdade|universidade|escola|colegio|mensalidade|udemy|alura|coursera|estrategia|qconcursos|tec concursos|direcao concursos|hotmart|kiwify|eduzz|apostila|copiadora|imposto|\bir\b|darf|ipva|iptu|receita federal|\binss\b/],
+  ["compras",/amazon|amzn|shopee|mercado ?livre|mercadolivre|\bmeli\b|magalu|magazine luiza|americanas|submarino|shein|aliexpress|\btemu\b|renner|riachuelo|\bc ?& ?a\b|\bcea\b|marisa|hering|\bzara\b|centauro|netshoes|decathlon|dafiti|kabum|pichau|terabyte|casas bahia|ponto frio|fast shop|tenis|roupa|mochila|calcad|\blojas?\b|outlet|shopping|havaianas|\bnike\b|adidas|\bpuma\b|olympikus|arezzo|samsung|xiaomi|kalunga|daiso|miniso|polishop|westwing/],
+  ["diaadia",/dia a dia|papelaria|recarga|credito celular|lavanderia|chaveiro|correios|cartorio|tabacaria|\bbanca\b|bazar|armarinho|utilidades|conveniencia|\bam ?pm\b/]
 ];
+/* tira prefixos de maquininha e intermediários: "PG *TON LOJA", "MP*FULANO", "IFD*IFOOD" */
+const PREFIXO_LOJA = /^\s*(?:pg|mp|pag|ec|sumup|zp|iz|ton|picpay|pagseg(?:uro)?|pagbank|dl|ebanx|paypal|htm|cielo|stone|ebw|getnet|rede|mercpago|mercado ?pago|pp|sq|nupay|ppro|ame|dm|pay|bs|ct|lj|pix)\s*\*+\s*/;
+function limpaLoja(desc){ let n = norm(desc).replace(/\s+/g," ").trim(), a; do { a = n; n = n.replace(PREFIXO_LOJA, ""); } while (n !== a && n); return n.replace(/\b(ltda|me|eireli|s ?\/? ?a|epp|com br|com)\b/g," ").replace(/\s+/g," ").trim(); }
 
 /* ---------- estado ---------- */
 const S = {
@@ -758,8 +764,8 @@ const sigla = n => { const w = String(n||"?").replace(/\b(e|de|da|do)\b/gi,"").t
 function categorizar(desc){
   const k = keyOf(desc);
   if (k && S.cfg.regras && S.cfg.regras[k] && catById(S.cfg.regras[k])) return S.cfg.regras[k];
-  const n = norm(desc);
-  for (const [id,re] of PALAVRAS) if (re.test(n) && catById(id)) return id;
+  const n = limpaLoja(desc), n0 = norm(desc);
+  for (const [id,re] of PALAVRAS) if ((re.test(n) || re.test(n0)) && catById(id)) return id;
   for (const c of S.cfg.cats) if (n && norm(c.nome).length>3 && n.includes(norm(c.nome))) return c.id;
   return null;
 }
@@ -938,7 +944,7 @@ async function lancarParsed(p, opts={}){
     if (grupo){ doc.grupo = grupo; doc.parc = (i+1)+"/"+n; }
     else if (p.parcInfo) doc.parc = p.parcInfo;
     if (p.cartao && p.tipo==="gasto"){ doc.cartao = true; doc.fatura = addMes(p.fatura || faturaDe(p.data), i); }
-    if (p.pagoEm && doc.cartao && n===1) doc.pagoEm = p.pagoEm;
+    if (p.pagoEm && doc.cartao && n===1){ doc.pagoEm = p.pagoEm; if (p.aPagar) doc.aPagar = true; }
     if (p.tipo==="pagfatura"){ doc.fatura = p.fatura || faturaDe(p.data); doc.cat = null; doc.revisar = false; }
     if (p.nota) doc.nota = String(p.nota).slice(0,300);
     if (n===1 && p.divide && +p.divide.valor>0 && p.tipo==="gasto"){ const parte = Math.min(+p.divide.valor, doc.valor); doc.valorTotal = doc.valor; doc.valor = r2(doc.valor - parte); doc.divide = {quem: String(p.divide.quem||"Alguém").slice(0,40), valor: r2(parte), recebido: false}; }
@@ -1101,7 +1107,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 17:55";
+const VERSAO = "12/10 19:40";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1250,11 +1256,13 @@ const ck = () => `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" st
 function faturaInfo(venc){
   const itens = [...S.lanc.values()].filter(d=>d.cartao && d.tipo==="gasto" && d.fatura===venc);
   const total = sum(itens, totalDe);
-  const pagoItens = sum(itens.filter(d=>d.pagoEm), totalDe);
+  const pagoItens = sum(itens.filter(d=>d.pagoEm && !d.aPagar), totalDe);
+  const adiantar = sum(itens.filter(d=>d.pagoEm && d.aPagar), totalDe);
   const pago = pagoItens + sum([...S.lanc.values()].filter(d=>d.tipo==="pagfatura" && d.fatura===venc), d=>d.valor);
   const porMes = {}; for (const d of itens) porMes[d.mes] = (porMes[d.mes]||0) + d.valor;
-  return {itens, total, pago, pagoItens, falta: Math.max(0, total - pago), porMes};
+  return {itens, total, pago, pagoItens, adiantar, falta: Math.max(0, total - pago), porMes};
 }
+const avisoAdiantar = (v, venc) => `<div class="adiantar"><span>Separe <b>${fm(v)}</b> para adiantar neste mês: comida e dia a dia que já vieram nesta fatura.</span><button type="button" class="linkbtn" data-act="jaAdiantei:${venc}">Já adiantei</button></div>`;
 function painelCartao(m){
   const tem = [...S.lanc.values()].some(d=>d.cartao);
   const cc = S.cfg.cartao || CFG_PADRAO.cartao;
@@ -1266,9 +1274,9 @@ function painelCartao(m){
   const jaContou = sum(Object.entries(atual.porMes).filter(([k])=>k!==m), ([,v])=>v), contaAgora = atual.porMes[m]||0;
   return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">${/^cart[aã]o$/i.test(cc.nome||"")||!cc.nome ? "Cartão" : "Cartão "+esc(cc.nome)}</h2><button class="act" data-act="cartaoExtrato">Ver compras</button></div>
     <div class="cards2">
-      <div class="fat"><div class="eyebrow">A pagar · fatura que vence em ${MES[+m.slice(5)-1]}</div><div class="fat-v">${fm(atual.falta)}</div>${atual.pago?`<p class="note" style="margin:0">fatura de ${fm0(atual.total)} · já pago ${fm0(atual.pago)}</p>`:""}${atual.total?`<button class="linkbtn" data-act="acertarFatura:${m}">Marcar o que já foi pago</button>`:""}
+      <div class="fat"><div class="eyebrow">A pagar · fatura que vence em ${MES[+m.slice(5)-1]}</div><div class="fat-v">${fm(atual.falta)}</div>${atual.pago?`<p class="note" style="margin:0">fatura de ${fm0(atual.total)} · já pago ${fm0(atual.pago)}</p>`:""}${atual.adiantar?avisoAdiantar(atual.adiantar, m):""}${atual.total?`<button class="linkbtn" data-act="acertarFatura:${m}">Marcar o que já foi pago</button>`:""}
         <p class="note">${atual.total? `${fm0(contaAgora)} pesam neste mês${jaContou?` · ${fm0(jaContou)} já tinham pesado no mês da compra`:""}.` : "Nenhuma compra registrada nela."}</p></div>
-      <div class="fat prox"><div class="eyebrow">A pagar · próxima fatura, vence em ${MES[+addMes(m,1).slice(5)-1]}</div><div class="fat-v">${fm(prox.falta)}</div>${prox.pago?`<p class="note" style="margin:0">fatura de ${fm0(prox.total)} · adiantado ${fm0(prox.pago)}</p>`:""}${prox.total?`<button class="linkbtn" data-act="acertarFatura:${addMes(m,1)}">Marcar o que já foi pago / adiantar</button>`:""}
+      <div class="fat prox"><div class="eyebrow">A pagar · próxima fatura, vence em ${MES[+addMes(m,1).slice(5)-1]}</div><div class="fat-v">${fm(prox.falta)}</div>${prox.pago?`<p class="note" style="margin:0">fatura de ${fm0(prox.total)} · adiantado ${fm0(prox.pago)}</p>`:""}${prox.adiantar?avisoAdiantar(prox.adiantar, addMes(m,1)):""}${prox.total?`<button class="linkbtn" data-act="acertarFatura:${addMes(m,1)}">Marcar o que já foi pago / adiantar</button>`:""}
         <p class="note">${prox.total ? `<b>${fm0(desteMesNaProx)}</b> são gastos deste mês (comida e dia a dia), já descontados do seu “livre”. ${fm0(fica)} ficam para o mês que vem.` : "Mande a fatura aberta para ver o que já é deste mês."}</p></div>
     </div>
     <div class="btns"><button class="btn" data-act="abrirImport">Mandar fatura</button>${atual.itens.length?`<button class="btn" data-act="analisarFatura:${m}">Analisar fatura de ${MES[+m.slice(5)-1]}</button>`:""}${prox.itens.length?`<button class="btn" data-act="analisarFatura:${addMes(m,1)}">Analisar fatura de ${MES[+addMes(m,1).slice(5)-1]}</button>`:""}</div></section>`;
@@ -1309,7 +1317,7 @@ function atualizarPagas(){
 async function salvarPagas(){
   const rows = memo.get("pagas")||[]; const mes = $("#pagasMes")?.value || memo.get("pagasMes"); fecharFolha(); let n = 0;
   for (const r of rows){ const d = S.lanc.get(r.id); if (!d) continue;
-    if (r.on && d.pagoEm!==mes){ await gravarLanc(r.id, Object.assign({}, d, {pagoEm: mes})); n++; }
+    if (r.on && (d.pagoEm!==mes || d.aPagar)){ const nd = Object.assign({}, d, {pagoEm: mes}); delete nd.aPagar; await gravarLanc(r.id, nd); n++; }
     else if (!r.on && d.pagoEm){ const nd = Object.assign({}, d); delete nd.pagoEm; await gravarLanc(r.id, nd); n++; } }
   const fi = faturaInfo(memo.get("pagasVenc"));
   toast(n ? `Pronto. Falta pagar ${fm(fi.falta)} desta fatura.` : "Nada mudou.", null, 6000);
@@ -1376,7 +1384,7 @@ function viewExtrato(){
       ${byDay[day].map(d=>{ const cls = d.tipo==="receita"?"in":(d.tipo==="aporte"||d.tipo==="resgate")?"sv":""; const sinal = d.tipo==="receita"?"+":(d.tipo==="gasto"?"−":(d.tipo==="aporte"?"→":d.tipo==="pagfatura"?"✓":"←"));
         const lab = d.tipo==="pagfatura" ? `Pagamento da fatura de ${mesAb(d.fatura)} (não entra no orçamento)` : d.tipo==="gasto" ? catNome(d.cat) : d.tipo==="receita" ? "Receita" : d.tipo==="aporte" ? "Guardado em "+((S.cfg.metas.find(x=>x.id===d.meta)||S.cfg.metas[0]||{}).nome||"meta") : "Resgate";
         return `<button class="tx" data-edit="${d.id}"><span class="d">${esc(d.desc)}</span><span class="val num ${cls}">${sinal} ${fm(d.valor)}</span>
-          <span class="m">${d.tipo==="gasto"?`<span class="dot" style="--cc:${corCat(d.cat)}"></span>`:""}${esc(lab)}${d.parc?` · parcela ${d.parc}`:""}${d.fixo?" · fixa":""}${d.cartao?` · cartão, fatura de ${mesAb(d.fatura)}${d.pagoEm?` · paga antes, em ${mesAb(d.pagoEm)}`:d.mes!==mesDe(d.data)?` (conta em ${mesAb(d.mes)})`:""}`:""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span>${d.divide?`<span class="m"><span class="pill ${d.divide.recebido?"g":"y"}" style="font-size:11.5px">${esc(d.divide.quem)} ${d.divide.recebido?"pagou":"vai pagar"} ${fm(d.divide.valor)} · total ${fm(d.valorTotal)}</span></span>`:""}${d.nota?`<span class="m nota">“${esc(d.nota)}”</span>`:""}</button>`; }).join("")}</div>`).join("")
+          <span class="m">${d.tipo==="gasto"?`<span class="dot" style="--cc:${corCat(d.cat)}"></span>`:""}${esc(lab)}${d.parc?` · parcela ${d.parc}`:""}${d.fixo?" · fixa":""}${d.cartao?` · cartão, fatura de ${mesAb(d.fatura)}${d.pagoEm?(d.aPagar?` · adiantar em ${mesAb(d.pagoEm)}`:` · paga antes, em ${mesAb(d.pagoEm)}`):d.mes!==mesDe(d.data)?` (conta em ${mesAb(d.mes)})`:""}`:""}${d.revisar?` <span class="flag">· revisar</span>`:""}</span>${d.divide?`<span class="m"><span class="pill ${d.divide.recebido?"g":"y"}" style="font-size:11.5px">${esc(d.divide.quem)} ${d.divide.recebido?"pagou":"vai pagar"} ${fm(d.divide.valor)} · total ${fm(d.valorTotal)}</span></span>`:""}${d.nota?`<span class="m nota">“${esc(d.nota)}”</span>`:""}</button>`; }).join("")}</div>`).join("")
       : `<div class="empty"><b>Nada por aqui</b>${E.busca||E.cat||E.tipo!=="todos"?"Nenhum lançamento com esses filtros.":"Lance o primeiro gasto na barra lá em cima: “50 gasolina”."}</div>`}
   </div>`;
 }
@@ -1601,26 +1609,57 @@ function acharDuplicado(r){
   return null;
 }
 const TIPO_COTIDIANO = c => ["mercado","delivery","saidas"].includes(c) ? "comida" : c==="transporte" ? "gasolina e transporte" : ["diaadia","pet","saude","cuidados","futebol"].includes(c) ? "dia a dia" : null;
+const mesAtual = () => mesDe(hoje());
+/* fatura do mês que vem com compras deste mês: "Pagar este mês" (você acerta agora, pesa neste mês e sai do que fica para a fatura) */
+const ehDeFaturaFutura = r => mesDe(r.data) >= mesAtual() && (r.fatura||"") > mesAtual();
+const rotPago = r => ehDeFaturaFutura(r) ? "Pagar este mês" : "Já paguei";
+function mesPago(r){ if (r.pagoMes) return r.pagoMes; const mc = mesDe(r.data), at = mesAtual(); return mc < at ? mc : at; }
+const ehAPagar = r => !!(r.cartao && r.tipo==="gasto" && r.pago && !r._jaPago && !r.pagoMes && ehDeFaturaFutura(r));
 function candidatosPagos(rows){
-  const atual = mesDe(hoje());
-  return rows.filter(r => r.cartao && r.tipo==="gasto" && r._on && TIPO_COTIDIANO(r.cat) && mesDe(r.data) < atual);
+  const atual = mesAtual();
+  return rows.filter(r => r.cartao && r.tipo==="gasto" && r._on && TIPO_COTIDIANO(r.cat) && mesDe(r.data) <= atual && mesDe(r.data) < (r.fatura||atual));
 }
 function sugerirPagos(rows, alvo){
-  rows.forEach(r => { if (r._sug){ r.pago = false; r._sug = false; } });
-  let cand = candidatosPagos(rows).filter(r => !r.pago).sort((a,b)=>a.data<b.data?-1:1);
+  rows.forEach(r => { if (r._sug){ r.pago = false; r._sug = false; r._jaPago = false; } });
+  const cand = candidatosPagos(rows).filter(r => !r.pago).sort((a,b)=>a.data<b.data?-1:1);
+  const passados = cand.filter(r => !ehDeFaturaFutura(r)), atuais = cand.filter(ehDeFaturaFutura);
   const escolhidos = [];
-  if (alvo > 0){ let soma = 0; for (const r of cand){ if (soma + (+r.valor||0) <= alvo + 0.01){ escolhidos.push(r); soma += +r.valor||0; } } }
-  else escolhidos.push(...cand);
-  escolhidos.forEach(r => { r.pago = true; r._sug = true; });
-  const por = {}; escolhidos.forEach(r => { const k = TIPO_COTIDIANO(r.cat); por[k] = (por[k]||0) + (+r.valor||0); });
-  memo.set("sugPago", {n: escolhidos.length, total: sum(escolhidos, r=>+r.valor||0), por});
-  return escolhidos.length;
+  if (alvo > 0){ let soma = 0; for (const r of passados){ if (soma + (+r.valor||0) <= alvo + 0.01){ escolhidos.push(r); soma += +r.valor||0; } } }
+  else escolhidos.push(...passados);
+  escolhidos.concat(atuais).forEach(r => { r.pago = true; r._sug = true; });
+  const por = {}, porA = {}; escolhidos.forEach(r => { const k = TIPO_COTIDIANO(r.cat); por[k] = (por[k]||0) + (+r.valor||0); });
+  atuais.forEach(r => { const k = TIPO_COTIDIANO(r.cat); porA[k] = (porA[k]||0) + (+r.valor||0); });
+  memo.set("sugPago", {n: escolhidos.length, total: sum(escolhidos, r=>+r.valor||0), por, nA: atuais.length, totalA: sum(atuais, r=>+r.valor||0), porA});
+  return escolhidos.length + atuais.length;
+}
+async function categorizarLoteIA(){
+  const rows = memo.get("lote")||[]; if (!S.ai || memo.get("catIA")) return;
+  const alvo = rows.map((r,i)=>({i, r})).filter(({r}) => r.tipo==="gasto" && !r.cat && r.desc); if (!alvo.length) return;
+  memo.set("catIA", true);
+  const prompt = `Classifique cada compra brasileira (cartão, Pix ou extrato) numa destas categorias. Use só o id:
+${S.cfg.cats.map(c=>`${c.id}: ${c.nome}`).join("\n")}
+
+Os nomes vêm da maquininha ou do banco, com prefixos como PG *, MP *, EC *, PAG*, SUMUP *, IFD*: ignore o prefixo e pense no estabelecimento. Supermercado, atacado, açougue e hortifruti são mercado; restaurante, lanchonete, bar, sorveteria e café são saídas; app de comida é delivery; posto, Uber e estacionamento são transporte; farmácia, clínica e academia são saúde. Se for nome de pessoa ou impossível saber, use "outros".
+
+Compras (índice|descrição|valor):
+${alvo.map(({i,r})=>`${i}|${r.desc}|${(+r.valor||0).toFixed(2)}`).join("\n")}
+
+Responda só com JSON: [{"i": índice, "cat": "id"}]`;
+  try{
+    const res = await S.ai.json(prompt, null, {modelTier:"quick"}); const arr = Array.isArray(res) ? res : (res.itens||res.compras||res.resultado||[]);
+    let n = 0; for (const x of arr){ const r = rows[+x.i]; if (r && !r.cat && x.cat && x.cat!=="outros" && catById(x.cat)){ r.cat = x.cat; r._catIA = true; n++; } }
+    if (!n || memo.get("lote")!==rows || !$("#loteBtn")) return;
+    if (!memo.get("loteMexeu") && rows.some(r=>r.cartao)) sugerirPagos(rows, memo.get("loteAlvoValor")||0);
+    if (!document.querySelector(".lc-edit:not([hidden])")) folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true);
+    toast(`A IA pôs categoria em ${n} ${n>1?"compras":"compra"} que eu não reconheci. Elas têm a marca ✦.`, null, 5000);
+  }catch(e){ memo.delete("catIA"); }
 }
 function estadoLinha(r){ return r._dupId && !r._on ? "existe" : !r._on ? "fora" : (r.cartao && r.tipo==="gasto" && r.pago) ? "pago" : "lancar"; }
 function folhaLote(rows, titulo, nota, venc, manter){
   if (!manter){
     const usados = new Set();
     rows.forEach(r=>{ const id = acharDuplicado(r); if (id && !usados.has(id)){ usados.add(id); r._dupId = id; r._on = false; } else { r._dupId = null; r._on = r.tipo!=="interno"; } });
+    memo.delete("catIA"); memo.delete("loteMexeu"); setTimeout(categorizarLoteIA, 60);
   }
   const ehFatura = rows.some(r=>r.cartao || r.tipo==="pagfatura");
   if (ehFatura){
@@ -1631,7 +1670,6 @@ function folhaLote(rows, titulo, nota, venc, manter){
   memo.set("lote", rows); memo.set("loteVenc", venc||null); memo.set("loteTitulo", titulo); memo.set("loteNota", nota||null);
   const catOpt = v => `<option value="">Sem categoria</option>`+S.cfg.cats.map(c=>`<option value="${c.id}" ${v===c.id?"selected":""}>${esc(c.nome)}</option>`).join("");
   const opcoesVenc = [-2,-1,0,1,2,3].map(k=>addMes(mesDe(hoje()),k));
-  const pm = memo.get("lotePagoMes") || addMes(mesDe(hoje()),-1);
   const tipos = [["gasto","Gasto"],["receita","Receita"],["aporte","Guardei"],["resgate","Resgatei"],["pagfatura","Pagou fatura"],["interno","Ignorar"]];
   const nDup = rows.filter(r=>r._dupId).length;
   abrirFolha(`<h3>${esc(titulo)}</h3><p class="lead">${esc(nota||"Para cada compra, escolha: Lançar, Já paguei ou Não lançar. Toque na compra para editar.")}</p>
@@ -1639,26 +1677,28 @@ function folhaLote(rows, titulo, nota, venc, manter){
         <label>Fatura do cartão que vence em <select id="loteVenc">${opcoesVenc.map(m=>`<option value="${m}" ${m===venc?"selected":""}>${mesLongo(m)}</option>`).join("")}</select></label>
         ${(()=>{ const sp = memo.get("sugPago"); const tot = {}; rows.filter(r=>r.cartao && r.tipo==="gasto" && (r._on||r._dupId)).forEach(r=>{ const k = TIPO_COTIDIANO(r.cat) || "outras compras"; tot[k]=(tot[k]||0)+(+r.valor||0); });
           return `<div class="fb-cot"><b>O que tem nesta fatura</b><div>${Object.entries(tot).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span class="pill">${esc(k)} ${fm0(v)}</span>`).join(" ")}</div>
-          ${sp && sp.n ? `<div class="sugbox"><b>Sugestão: marquei ${sp.n} ${sp.n>1?"compras":"compra"} como “Já paguei” (${fm(sp.total)})</b><span>São compras do dia a dia de meses anteriores: ${Object.entries(sp.por).map(([k,v])=>`${k} ${fm0(v)}`).join(", ")}. Revise as marcadas com <i>sugestão</i>.</span><div class="btns" style="margin:4px 0 0"><button type="button" class="btn" data-act="desfazerSug">Desfazer sugestão</button></div></div>`
-            : `<div class="btns" style="margin:6px 0 0"><button type="button" class="btn" data-act="refazerSug">Sugerir o que já foi pago</button></div>`}</div>`; })()}
+          ${venc > mesAtual() ? `<div class="sugbox futura"><b>Esta fatura só vence em ${mesLongo(venc)}</b><span>Comida, gasolina e dia a dia de ${mesLongo(mesAtual())} que vieram nela ficam como <b>“Pagar este mês”</b>: você acerta agora, junto com as contas de ${MES[+mesAtual().slice(5)-1]}, e elas saem do que fica para ${MES[+venc.slice(5)-1]}. Parcelas e compras maiores continuam na fatura.</span>${sp && sp.nA ? `<span>Marquei ${sp.nA} ${sp.nA>1?"compras":"compra"}: <b>${fm(sp.totalA)}</b> (${Object.entries(sp.porA).map(([k,v])=>`${k} ${fm0(v)}`).join(", ")}).</span>` : ""}</div>` : ""}
+          ${sp && sp.n ? `<div class="sugbox"><b>Sugestão: marquei ${sp.n} ${sp.n>1?"compras":"compra"} como “Já paguei” (${fm(sp.total)})</b><span>São compras do dia a dia de meses anteriores: ${Object.entries(sp.por).map(([k,v])=>`${k} ${fm0(v)}`).join(", ")}. Revise as marcadas com <i>sugestão</i>.</span></div>` : ""}
+          <div class="btns" style="margin:6px 0 0">${sp && (sp.n || sp.nA) ? `<button type="button" class="btn" data-act="desfazerSug">Desfazer sugestões</button>` : `<button type="button" class="btn" data-act="refazerSug">Sugerir o que já foi pago ou é deste mês</button>`}</div></div>`; })()}
         <div class="fb-pago"><b>Já adiantou parte desta fatura?</b>
           <label>Quanto falta pagar no banco? <input id="loteFalta" inputmode="decimal" placeholder="ex.: 2.167,00" value="${esc(memo.get("loteFalta")||"")}"></label>
           <div id="loteAlvo" class="note"></div>
           <button type="button" class="btn" data-act="lotePagasAuto" id="loteAutoBtn" hidden>Marcar as mais antigas como “Já paguei”</button>
-          <label>“Já paguei” conta como gasto de <select id="lotePagoMes">${[-2,-1,0].map(k=>addMes(mesDe(hoje()),k)).map(m=>`<option value="${m}" ${m===pm?"selected":""}>${mesLongo(m)}</option>`).join("")}</select></label>
+          <p class="note" style="margin:0">“Já paguei” conta como gasto do mês da compra. Para mudar, toque na compra.</p>
         </div></div>`
       : (rows.some(r=>r.tipo==="gasto") ? `<button type="button" class="linkbtn" data-act="loteEhFatura" style="margin-bottom:10px">Isto é uma fatura de cartão de crédito</button>` : "")}
     ${nDup?`<div class="fatbox" style="background:var(--amber-soft)"><b>${nDup} ${nDup>1?"compras já estavam":"compra já estava"} no app</b> (mesmo valor, até 3 dias de diferença). Ficaram como “Já está no app” e não serão lançadas de novo. Se for outra compra, toque em Lançar.</div>`:""}
     <div class="lote-lista">${rows.map((r,i)=>{ const st = estadoLinha(r); const ex = r._dupId ? S.lanc.get(r._dupId) : null;
-      const opts = [["lancar","Lançar"], ...((r.cartao && r.tipo==="gasto") ? [["pago","Já paguei"]] : []), [r._dupId?"existe":"fora", r._dupId?"Já está no app":"Não lançar"]];
+      const opts = [["lancar","Lançar"], ...((r.cartao && r.tipo==="gasto") ? [["pago", rotPago(r)]] : []), [r._dupId?"existe":"fora", r._dupId?"Já está no app":"Não lançar"]];
       return `<div class="lc ${st}" data-lc="${i}">
         <div class="lc-top" data-act="loteAbrir:${i}"><span class="lc-dt">${r.data.slice(8)}/${r.data.slice(5,7)}</span><span class="lc-ds">${esc(r.desc)}${ex?`<small>já lançado como “${esc(ex.desc)}” em ${ex.data.slice(8)}/${ex.data.slice(5,7)}</small>`:""}</span><b class="lc-v">${fm(r.valor)}</b></div>
-        <div class="lc-meta"><span class="dot" style="--cc:${corCat(r.cat)}"></span>${esc(r.tipo==="gasto"?catNome(r.cat):(tipos.find(t=>t[0]===r.tipo)||[])[1]||r.tipo)}${r.parcInfo?` · parcela ${esc(r.parcInfo)}`:""}${ehFatura?` · <span data-contaem="${i}">${contaEmTxt(r)}</span>`:""}${r._sug && r.pago?` · <span class="lc-sug">sugestão</span>`:""}${(r.nota||+r.parte)?` · <span class="lc-tag">${+r.parte?`${esc(r.quem||"alguém")} paga ${fm0(r.parte)}`:"comentário"}</span>`:""}</div>
+        <div class="lc-meta"><span class="dot" style="--cc:${corCat(r.cat)}"></span>${esc(r.tipo==="gasto"?catNome(r.cat):(tipos.find(t=>t[0]===r.tipo)||[])[1]||r.tipo)}${r._catIA?` <span class="lc-ia" title="categoria escolhida pela IA">✦</span>`:""}${r.parcInfo?` · parcela ${esc(r.parcInfo)}`:""}${ehFatura?` · <span data-contaem="${i}">${contaEmTxt(r)}</span>`:""}${r._sug && r.pago?` · <span class="lc-sug">sugestão</span>`:""}${(r.nota||+r.parte)?` · <span class="lc-tag">${+r.parte?`${esc(r.quem||"alguém")} paga ${fm0(r.parte)}`:"comentário"}</span>`:""}</div>
         <div class="lc-seg" role="group" aria-label="O que fazer">${opts.map(([v,n])=>`<button type="button" data-act="estado:${i}:${v}" aria-pressed="${st===v}">${n}</button>`).join("")}</div>
         <div class="lc-edit" data-edit-lote="${i}" hidden>
           <label>Descrição<input type="text" data-lote="${i}.desc" value="${esc(r.desc)}"></label>
           <div class="lc-2"><label>Valor<input type="text" inputmode="decimal" data-lote="${i}.valor" value="${BRL.format(r.valor)}"></label><label>Data<input type="date" data-lote="${i}.data" value="${r.data}"></label></div>
           <div class="lc-2"><label>Tipo<select data-lote="${i}.tipo">${tipos.map(([v,n])=>`<option value="${v}" ${r.tipo===v?"selected":""}>${n}</option>`).join("")}</select></label><label>Categoria<select data-lote="${i}.cat">${catOpt(r.cat)}</select></label></div>
+          ${(r.cartao && r.tipo==="gasto") ? `<label>Se já pago, conta como gasto de<select data-lote="${i}.pagoMes"><option value="">${ehDeFaturaFutura(r)?"este mês (vou pagar agora)":"mês da compra"}</option>${[-2,-1,0].map(k=>addMes(mesAtual(),k)).map(m=>`<option value="${m}" ${r.pagoMes===m?"selected":""}>${mesLongo(m)}${m===mesAtual()&&ehDeFaturaFutura(r)?" (já paguei)":""}</option>`).join("")}</select></label>` : ""}
           <label>Comentário<input type="text" data-lote="${i}.nota" value="${esc(r.nota||"")}" placeholder="opcional"></label>
           <div class="lc-2"><label>Alguém te paga uma parte?<input type="text" data-lote="${i}.quem" value="${esc(r.quem||"")}" placeholder="quem"></label><label>Quanto<input type="text" inputmode="decimal" data-lote="${i}.parte" value="${+r.parte?BRL.format(r.parte):""}" placeholder="0,00"></label></div>
         </div></div>`; }).join("")}</div>
@@ -1669,7 +1709,7 @@ function alvoLote(){
   const el = $("#loteAlvo"); if (!el) return; const rows = memo.get("lote")||[];
   const txt = $("#loteFalta")?.value||""; const falta = parseValor(txt);
   const total = sum(rows.filter(r=>r.cartao && r.tipo==="gasto" && (r._on || r._dupId)), r=>+r.valor||0);
-  const pagosLinhas = sum(rows.filter(r=>r.cartao && r.tipo==="gasto" && r._on && r.pago), r=>+r.valor||0);
+  const pagosLinhas = sum(rows.filter(r=>r.cartao && r.tipo==="gasto" && r._on && r.pago && !ehAPagar(r)), r=>+r.valor||0);
   const pagfat = sum(rows.filter(r=>r.tipo==="pagfatura" && (r._on || r._dupId)), r=>+r.valor||0);
   if (!txt){ el.innerHTML = `Total das compras: <b>${fm(total)}</b>. Se o banco cobra menos que isso, a diferença é o que você já pagou.`; $("#loteAutoBtn").hidden = true; return; }
   const alvo = r2(total - pagfat - falta), dif = r2(pagosLinhas - alvo);
@@ -1746,7 +1786,11 @@ function contextoFatura(A){
   const media = {}; ant.forEach(mm => lancDoMes(mm).filter(d=>d.tipo==="gasto").forEach(d=>{ const k = catNome(d.cat); media[k]=(media[k]||0)+d.valor/3; }));
   const R = resumo(mesDe(hoje()));
   const metas = (S.cfg.metas||[]).map(m=>`${m.nome}: saldo ${saldoMeta(m).toFixed(0)}, alvo ${m.alvo}, guardando ${m.aporteMensal||0}/mês`).join("; ");
-  const lista = G.map(x=>`${x.data} (${dias[new Date(x.data+"T12:00:00").getDay()]}) | ${x.desc} | ${catNome(x.cat)} | ${x.minha.toFixed(2)}${x.valor!==x.minha?` (total ${x.valor.toFixed(2)}, outra pessoa paga o resto)`:""}${x.parcInfo?" | parcela "+x.parcInfo:""}${x.nota?" | nota: "+x.nota:""}`).join("\n").slice(0,60000);
+  // lista enxuta: as 250 maiores compras linha a linha; o resto vai somado por categoria
+  const ord = G.slice().sort((a,b)=>b.minha-a.minha), top = ord.slice(0,250), resto = ord.slice(250);
+  const restoCat = {}; resto.forEach(x=>{ const k = catNome(x.cat); restoCat[k]=(restoCat[k]||0)+x.minha; });
+  const lista = top.sort((a,b)=>a.data<b.data?-1:1).map(x=>`${x.data.slice(8)}/${x.data.slice(5,7)} ${dias[new Date(x.data+"T12:00:00").getDay()]}|${String(x.desc).slice(0,38)}|${catNome(x.cat)}|${x.minha.toFixed(2)}${x.valor!==x.minha?` (total ${x.valor.toFixed(0)}, outro paga resto)`:""}${x.parcInfo?"|parc "+x.parcInfo:""}${x.nota?"|nota: "+String(x.nota).slice(0,60):""}`).join("\n").slice(0,24000)
+    + (resto.length ? `\n+ ${resto.length} compras menores somadas: ${Object.entries(restoCat).map(([k,v])=>k+" "+v.toFixed(0)).join("; ")}` : "");
   return `FATURA ${A.venc?("que vence em "+A.venc):""}
 Total ${A.stats.total.toFixed(2)} | parte da pessoa ${A.stats.minha.toFixed(2)} | a receber de outros ${A.stats.receber.toFixed(2)} | já pago/adiantado ${A.stats.pago.toFixed(2)}
 Comida: total ${A.stats.comidaT.toFixed(2)} (mercado ${A.stats.mercT.toFixed(2)}, delivery ${A.stats.delivT.toFixed(2)} em ${A.stats.delivN} pedidos, saídas ${A.stats.saidT.toFixed(2)}) | assinaturas/jogos ${A.stats.assinT.toFixed(2)} | ${A.stats.pequenosN} compras de até R$30 somando ${A.stats.pequenosT.toFixed(2)}
@@ -1755,7 +1799,7 @@ Média mensal dos 3 meses anteriores por categoria (app): ${Object.entries(media
 Orçamento mensal definido: ${S.cfg.cats.filter(c=>+c.orc).map(c=>c.nome+" "+c.orc).join("; ")||"não definido"}
 Receita prevista do mês: ${R.receitaPrev.toFixed(0)} | contas previstas: ${itensDoMes(mesDe(hoje())).map(f=>f.nome+" "+previsto(f,mesDe(hoje()))).join("; ")||"nenhuma"}
 Metas: ${metas||"nenhuma"}
-COMPRAS (data (dia) | descrição | categoria | valor da parte da pessoa):
+COMPRAS (dd/mm dia|descrição|categoria|valor da parte da pessoa):
 ${lista}`;
 }
 async function iaAnalisar(){
@@ -1783,7 +1827,7 @@ Responda SÓ com um JSON neste formato (todos os campos):
 }
 Use no máximo 6 itens em economias, 6 em alertas, 8 em categorias. Valores em reais, números sem R$.`;
   try{
-    const r = await S.ai.json(prompt, null, {modelTier:"complex"});
+    const r = await S.ai.json(prompt, null, {modelTier:"complex", parcial: n => { const p = $("#iaBox .ia-load p"); if (p) p.textContent = `Recebendo a análise… ${Math.round(n/100)/10} mil caracteres`; }});
     memo.set("iaResultado", r);
     if (!$("#iaBox")) return;
     const lst = a => Array.isArray(a) ? a : [];
@@ -1806,14 +1850,13 @@ Use no máximo 6 itens em economias, 6 em alertas, 8 em categorias. Valores em r
     </div>`;
   }catch(e){ if ($("#iaBox")) $("#iaBox").innerHTML = `<p class="note">${esc(S.ai.erro(e)||"Não consegui analisar agora. Tente de novo.")}</p><button type="button" class="btn" data-act="iaAnalise">Tentar de novo</button>`; }
 }
-function contaEmTxt(r){ if (r.cartao && r.tipo==="gasto" && r.pago){ const m = memo.get("lotePagoMes")||addMes(mesDe(hoje()),-1); return `<span class="pill" style="background:var(--violet-soft);color:var(--violet)">${mesAb(m)} ✓</span>`; }
+function contaEmTxt(r){ if (r.cartao && r.tipo==="gasto" && r.pago){ const m = mesPago(r); return ehAPagar(r) ? `<span class="pill" style="background:var(--tang-soft,#FFE9DA);color:var(--tang)">pagar em ${mesAb(m)}</span>` : `<span class="pill" style="background:var(--violet-soft);color:var(--violet)">${mesAb(m)} ✓</span>`; }
   if (!r.cartao || r.tipo!=="gasto") return `<span class="pill">${mesAb(mesDe(r.data))}</span>`; const m = mesEfetivo({cartao:true, tipo:"gasto", fatura:r.fatura, cat:r.cat, data:r.data, parc:r.parcInfo}); return `<span class="pill ${m===mesDe(r.data)?"g":"y"}">${mesAb(m)}</span>`; }
 function resumoLote(){
   const rows = memo.get("lote")||[]; const el = $("#loteResumo"); if (!el) return;
-  const pm = memo.get("lotePagoMes")||addMes(mesDe(hoje()),-1);
   const pgf = sum(rows.filter(r=>r.tipo==="pagfatura" && (r._on||r._dupId)), r=>+r.valor||0);
-  const por = {}; let pagos = 0, tot = 0; rows.filter(r=>r._on && r.cartao && r.tipo==="gasto").forEach(r=>{ const m = r.pago ? pm : mesEfetivo({cartao:true,tipo:"gasto",fatura:r.fatura,cat:r.cat,data:r.data,parc:r.parcInfo}); por[m]=(por[m]||0)+(+r.valor||0); tot += +r.valor||0; if (r.pago) pagos += +r.valor||0; });
-  el.innerHTML = Object.keys(por).sort().map(m=>`<b>${fm(por[m])}</b> pesam em ${mesLongo(m)}`).join(" · ") + ((pagos||pgf)?` · já pago <b>${fm(pagos+pgf)}</b>, falta pagar <b>${fm(Math.max(0,tot-pagos-pgf))}</b>`:"");
+  const por = {}; let pagos = 0, aPagar = 0, tot = 0; rows.filter(r=>r._on && r.cartao && r.tipo==="gasto").forEach(r=>{ const m = r.pago ? mesPago(r) : mesEfetivo({cartao:true,tipo:"gasto",fatura:r.fatura,cat:r.cat,data:r.data,parc:r.parcInfo}); por[m]=(por[m]||0)+(+r.valor||0); tot += +r.valor||0; if (ehAPagar(r)) aPagar += +r.valor||0; else if (r.pago) pagos += +r.valor||0; });
+  el.innerHTML = Object.keys(por).sort().map(m=>`<b>${fm(por[m])}</b> pesam em ${mesLongo(m)}`).join(" · ") + (aPagar?` · pagar este mês <b>${fm(aPagar)}</b>`:"") + ((pagos||pgf||aPagar)?` · ${pagos+pgf?`já pago <b>${fm(pagos+pgf)}</b>, `:""}fica para a fatura <b>${fm(Math.max(0,tot-pagos-pgf-aPagar))}</b>`:"");
 }
 
 function folhaColar(){
@@ -1880,7 +1923,7 @@ Responda só com um objeto JSON neste formato: {"vencimento":"2026-11","lancamen
 /* camada de IA: Claude (no app do Claude) ou Gemini via Firebase (no site) */
 function jsonSolto(t){ t = String(t||"").trim(); try{ return JSON.parse(t); }catch(e){} const f = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (f){ try{ return JSON.parse(f[1]); }catch(e){} } const a = t.search(/[\[{]/), b = Math.max(t.lastIndexOf("]"), t.lastIndexOf("}")); if (a>=0 && b>a){ try{ return JSON.parse(t.slice(a,b+1)); }catch(e){} } const err = new Error("json"); err.code = "invalid_json"; throw err; }
 function iaClaude(sample){ return {
-  json: (prompt, imgs, extra) => sample.json(prompt, Object.assign(imgs ? {images: imgs} : {}, extra||{})),
+  json: (prompt, imgs, extra) => { const o = Object.assign({}, extra||{}); delete o.parcial; return sample.json(prompt, Object.assign(imgs ? {images: imgs} : {}, o)); },
   texto: (prompt, onText, extra) => sample(prompt, Object.assign({onText: ({text}) => onText(text)}, extra||{})).then(r => r.text),
   erro: e => ({not_granted:"Você não liberou o uso do Claude para este app.", rate_limited:"Muitas leituras seguidas. Espere um pouco.", images_unavailable:"Este aparelho não consegue enviar imagens. Cole o texto.", invalid_json:"A leitura veio confusa. Tente de novo."})[e?.code]
 };}
@@ -1897,18 +1940,21 @@ function iaGemini(){
     for (let tent = 0; tent < MODELOS.length; tent++){
       try{ const r = await fn(await modelo(json)); try{ localStorage.setItem("caderneta-modelo", MODELOS[idx]); }catch(e){} return r; }
       catch(e){ ultimo = e; const m = String(e?.message||e);
-        if (e?.code==="invalid_json" || /quota|RESOURCE_EXHAUSTED|429|SERVICE_DISABLED|has not been used|API key|network|Failed to fetch/i.test(m)) throw e;
+        if (e?.code==="invalid_json" || /quota|RESOURCE_EXHAUSTED|429|SERVICE_DISABLED|has not been used|API key/i.test(m)) throw e;
         if (idx < MODELOS.length-1){ idx++; continue; } throw e; } }
     throw ultimo;
   }
   const partes = imgs => Promise.all([...imgs].map(f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res({inlineData:{data:String(r.result).split(",")[1], mimeType:f.type||"image/jpeg"}}); r.onerror = rej; r.readAsDataURL(f); })));
   return {
-    json: (prompt, imgs) => tentar(true, async m => { const conteudo = imgs ? [prompt, ...(await partes(imgs))] : prompt; const r = await m.generateContent(conteudo); return jsonSolto(r.response.text()); }),
+    json: (prompt, imgs, extra) => tentar(true, async m => { const conteudo = imgs ? [prompt, ...(await partes(imgs))] : prompt;
+      // em streaming: a conexão não fica parada esperando a resposta inteira (no celular ela caía no meio)
+      const r = await m.generateContentStream(conteudo); let t = ""; for await (const c of r.stream){ t += c.text(); extra?.parcial?.(t.length); } return jsonSolto(t); }),
     texto: (prompt, onText) => tentar(false, async m => { const r = await m.generateContentStream(prompt); let t = ""; for await (const c of r.stream){ t += c.text(); onText(t); } return t; }),
     erro: e => { const m = String(e?.message||e);
       if (e?.code==="invalid_json") return "A leitura veio confusa. Tente de novo.";
       if (/SERVICE_DISABLED|has not been used in project|is disabled/i.test(m)) return "A API de IA está desligada no projeto: Firebase → AI Logic → Gemini Developer API. Detalhe: " + m.replace(/https?:\/\/\S+/g,"").slice(0,160);
       if (/quota|429|RESOURCE_EXHAUSTED/i.test(m)) return "Limite gratuito da IA atingido por agora. Tente mais tarde.";
+      if (/Failed to fetch|network|Load failed|NetworkError|aborted|timeout/i.test(m)) return "A conexão caiu no meio da resposta da IA (comum no 4G ou com a tela apagando). Toque em Tentar de novo com a tela acesa.";
       return "A IA respondeu com erro (modelo " + MODELOS[idx] + "): " + m.replace(/https?:\/\/\S+/g,"").replace(/\s+/g," ").slice(0,220); }
   };
 }
@@ -2104,39 +2150,48 @@ async function acao(a, el){
     case "apagarGrupo": { if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="Confirmar"; return; }
       fecharFolha(); const ids = [...S.lanc.entries()].filter(([,d])=>d.grupo===arg).map(([id])=>id); for (const id of ids) await apagarLanc(id); toast(`${ids.length} parcelas apagadas`); return; }
     case "lancarLote": { const todas = memo.get("lote")||[]; const rows = todas.filter(r=>r._on && r.tipo!=="interno" && r.valor>0); fecharFolha();
+      { let aprendeu = 0; for (const r of todas){ if (r._catManual && r.cat && r.tipo==="gasto"){ const k = keyOf(r.desc); if (k && S.cfg.regras[k]!==r.cat){ S.cfg.regras[k] = r.cat; aprendeu++; } } } if (aprendeu) salvarCfg(); }
       let ligados = 0;
       for (const r of todas.filter(r=>!r._on && r._dupId && (r.cartao || r.nota || +r.parte))){ const d = S.lanc.get(r._dupId); if (!d) continue; const nd = Object.assign({}, d);
         if (r.cartao && d.tipo==="gasto"){ nd.cartao = true; nd.fatura = r.fatura || faturaDe(d.data); }
         if (r.nota && !d.nota) nd.nota = r.nota;
         if (+r.parte>0 && !d.divide){ const tot = totalDe(d), pt = Math.min(+r.parte, tot); nd.valorTotal = tot; nd.valor = r2(tot-pt); nd.divide = {quem:r.quem||"Alguém", valor:r2(pt), recebido:false}; }
         await gravarLanc(r._dupId, nd); ligados++; }
-      let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:(r.tipo==="aporte"||r.tipo==="resgate")?(r.meta||S.cfg.metas[0]?.id):null, rec:r.tipo==="receita"?r.rec:null, data:r.data, parcelas:r.parcelas||1, cartao:!!r.cartao, fatura:r.fatura||null, parcInfo:r.parcInfo||null, pagoEm: (r.cartao && r.pago) ? (memo.get("lotePagoMes")||addMes(mesDe(hoje()),-1)) : null, nota:r.nota||null, divide: +r.parte>0 ? {quem:r.quem, valor:+r.parte} : null, origem:"importado"})); }
+      let all=[]; for (const r of rows){ all = all.concat(await lancarParsed({tipo:r.tipo, valor:r.valor, desc:r.desc, cat:r.tipo==="gasto"?r.cat:null, meta:(r.tipo==="aporte"||r.tipo==="resgate")?(r.meta||S.cfg.metas[0]?.id):null, rec:r.tipo==="receita"?r.rec:null, data:r.data, parcelas:r.parcelas||1, cartao:!!r.cartao, fatura:r.fatura||null, parcInfo:r.parcInfo||null, pagoEm: (r.cartao && r.pago) ? mesPago(r) : null, aPagar: ehAPagar(r), nota:r.nota||null, divide: +r.parte>0 ? {quem:r.quem, valor:+r.parte} : null, origem:"importado"})); }
       toast(`${rows.length} lançamentos adicionados${ligados?` · ${ligados} já existentes ligados à fatura`:""}`, async()=>{ for (const id of all) await apagarLanc(id); toast("Desfeito"); }); return; }
     case "abrirImport": folhaColar(); return;
     case "estado": { const [i, v] = arg.split(":"); const rows = memo.get("lote"); const r = rows[+i]; if (!r) return;
-      if (v==="pago" && !r.pago && ($("#loteFalta")?.value||"").trim()){
-        const alvo = memo.get("loteAlvoValor")||0; const marcado = sum(rows.filter(x=>x.cartao && x.tipo==="gasto" && x._on && x.pago), x=>+x.valor||0);
+      memo.set("loteMexeu", true);
+      if (v==="pago" && !r.pago && !ehDeFaturaFutura(r) && ($("#loteFalta")?.value||"").trim()){
+        const alvo = memo.get("loteAlvoValor")||0; const marcado = sum(rows.filter(x=>x.cartao && x.tipo==="gasto" && x._on && x.pago && !ehAPagar(x)), x=>+x.valor||0);
         const resta = r2(alvo - marcado);
         if ((+r.valor||0) > resta + 0.5){ toast(resta > 0.5 ? `Passaria do que você já pagou (${fm(alvo)}). Só falta marcar ${fm(resta)}: escolha uma compra de até esse valor ou desmarque outra.` : `Você já marcou tudo o que pagou (${fm(alvo)}). Desmarque outra compra antes.`, null, 7000); return; }
       }
-      if (v==="lancar"){ r._on = true; r.pago = false; } else if (v==="pago"){ r._on = true; r.pago = true; } else { r._on = false; r.pago = false; }
+      if (v==="lancar"){ r._on = true; r.pago = false; } else if (v==="pago"){ r._on = true; r.pago = true; r._jaPago = false; } else { r._on = false; r.pago = false; }
       r._sug = false; const card = document.querySelector(`[data-lc="${i}"]`);
       if (card){ const st = estadoLinha(r); card.classList.remove("lancar","pago","fora","existe"); card.classList.add(st);
         card.querySelectorAll(".lc-seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.act.endsWith(":"+st))));
         const c = card.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); card.querySelector(".lc-sug")?.remove(); }
       const b = $("#loteBtn"); if (b) b.textContent = rotuloLote(); resumoLote(); alvoLote(); return; }
     case "loteAbrir": { const ed = document.querySelector(`[data-edit-lote="${arg}"]`); if (ed){ const abrir = ed.hidden; if (!abrir){ folhaLote(memo.get("lote"), memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); return; } ed.hidden = false; ed.querySelector("input")?.focus(); } return; }
-    case "desfazerSug": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r._sug){ r.pago = false; r._sug = false; } }); memo.set("sugPago", {n:0,total:0,por:{}}); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); return; }
-    case "refazerSug": { const rows = memo.get("lote"); const n = sugerirPagos(rows, memo.get("loteAlvoValor")||0); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); if (!n) toast("Não achei compras do dia a dia de meses anteriores nesta fatura."); return; }
+    case "desfazerSug": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r._sug){ r.pago = false; r._sug = false; r._jaPago = false; } }); memo.set("sugPago", {n:0,total:0,por:{},nA:0,totalA:0,porA:{}}); memo.set("loteMexeu", true); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); return; }
+    case "refazerSug": { const rows = memo.get("lote"); const n = sugerirPagos(rows, memo.get("loteAlvoValor")||0); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); if (!n) toast("Não achei compras de comida ou dia a dia para marcar nesta fatura."); return; }
     case "loteEhFatura": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r.tipo==="gasto") r.cartao = true; }); sugerirPagos(rows, 0); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), null, true); return; }
     case "lotePagasAuto": { const rows = memo.get("lote"); const alvo = memo.get("loteAlvoValor")||0; let soma = 0;
-      rows.forEach(r=>{ if (r.cartao && r.tipo==="gasto" && r._on){ r.pago = false; r._sug = false; } });
-      const atualM = mesDe(hoje()); const prio = r => (TIPO_COTIDIANO(r.cat) && mesDe(r.data) < atualM) ? 0 : 1;
-      for (const r of rows.filter(r=>r.cartao && r.tipo==="gasto" && r._on).sort((a,b)=>(prio(a)-prio(b)) || (a.data<b.data?-1:1))){ if (soma + (+r.valor||0) <= alvo + 0.01){ r.pago = true; r._sug = true; soma += +r.valor||0; } }
-      const por = {}; rows.filter(r=>r._sug).forEach(r=>{ const k = TIPO_COTIDIANO(r.cat)||"outras compras"; por[k]=(por[k]||0)+(+r.valor||0); }); memo.set("sugPago", {n: rows.filter(r=>r._sug).length, total: soma, por});
+      memo.set("loteMexeu", true);
+      rows.forEach(r=>{ if (r.cartao && r.tipo==="gasto" && r._on){ if (!ehAPagar(r)){ r.pago = false; r._sug = false; } r._jaPago = false; } });
+      const atualM = mesAtual(); const prio = r => (TIPO_COTIDIANO(r.cat) && mesDe(r.data) < atualM) ? 0 : TIPO_COTIDIANO(r.cat) ? 1 : 2;
+      const escolhidas = [];
+      for (const r of rows.filter(r=>r.cartao && r.tipo==="gasto" && r._on).sort((a,b)=>(prio(a)-prio(b)) || (a.data<b.data?-1:1))){ if (soma + (+r.valor||0) <= alvo + 0.01){ r.pago = true; r._sug = true; r._jaPago = true; soma += +r.valor||0; escolhidas.push(r); } }
+      const por = {}; escolhidas.forEach(r=>{ const k = TIPO_COTIDIANO(r.cat)||"outras compras"; por[k]=(por[k]||0)+(+r.valor||0); });
+      const restA = rows.filter(ehAPagar); const porA = {}; restA.forEach(r=>{ const k = TIPO_COTIDIANO(r.cat)||"outras compras"; porA[k]=(porA[k]||0)+(+r.valor||0); });
+      memo.set("sugPago", {n: escolhidas.length, total: soma, por, nA: restA.length, totalA: sum(restA, r=>+r.valor||0), porA});
       folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true);
       toast(Math.abs(soma-alvo)<0.5 ? `Marquei ${fm(soma)} como já pago. Bateu com o banco.` : `Marquei ${fm(soma)} das compras mais antigas. Faltam ${fm(alvo-soma)} para bater: ajuste à mão.`, null, 6000); return; }
     case "acertarFatura": folhaPagas(arg); return;
+    case "jaAdiantei": { const ids = [...S.lanc.entries()].filter(([,d])=>d.aPagar && d.fatura===arg).map(([id])=>id); const antes = ids.map(id=>[id, S.lanc.get(id)]);
+      for (const id of ids){ const nd = Object.assign({}, S.lanc.get(id)); delete nd.aPagar; await gravarLanc(id, nd); }
+      toast(`Anotado: ${ids.length} ${ids.length>1?"compras adiantadas":"compra adiantada"}.`, async()=>{ for (const [id,d] of antes) await gravarLanc(id, d); }); return; }
     case "autoPagas": { const alvo = parseValor($("#alvoPago")?.value||"")||0; const rows = memo.get("pagas")||[]; let soma = 0;
       rows.forEach(r=>r.on=false); for (const r of rows.slice().sort((a,b)=>a.data<b.data?-1:1)){ if (soma + r.total <= alvo + 0.01){ r.on = true; soma += r.total; } }
       folhaPagas(memo.get("pagasVenc"), true); return; }
@@ -2241,8 +2296,8 @@ document.addEventListener("input", e=>{
   if (t.id==="lotePagoMes"){ memo.set("lotePagoMes", t.value); (memo.get("lote")||[]).forEach((r,i)=>{ const c = document.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); }); resumoLote(); return; }
   if (t.dataset.plan){ const mm = memo.get("planMes"); (S.cfg.planos ||= {}); (S.cfg.planos[mm] ||= {}); S.cfg.planos[mm][t.dataset.plan] = parseValor(t.value)||0; salvarCfg(); const tot = $("#planTot"); if (tot) tot.textContent = fm(sum(itensDoMes(mm), f=>previsto(f,mm))); return; }
   if (t.id==="loteFalta"){ memo.set("loteFalta", t.value); alvoLote(); return; }
-  if (t.id==="loteVenc"){ const v = t.value; memo.set("loteVenc", v); (memo.get("lote")||[]).forEach((r,i)=>{ if (r.cartao){ r.fatura = v; const c = document.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); } }); resumoLote(); return; }
-  if (t.dataset.lote){ const [i,k] = t.dataset.lote.split("."); const r = memo.get("lote")[+i]; if (k==="on") r._on = t.checked; else if (k==="valor") r.valor = parseValor(t.value)||0; else if (k==="parte") r.parte = parseValor(t.value)||0; else r[k] = t.value || (k==="cat"?null:t.value); if (k==="tipo" && t.value==="interno"){ r._on=false; t.closest("tr").querySelector('[data-lote$=".on"]').checked=false; } const b=$("#loteBtn"); if (b) b.textContent = rotuloLote(); alvoLote(); const c = document.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); resumoLote(); }
+  if (t.id==="loteVenc"){ const v = t.value; memo.set("loteVenc", v); const rows = memo.get("lote")||[]; rows.forEach(r=>{ if (r.cartao) r.fatura = v; }); if (!memo.get("loteMexeu")) sugerirPagos(rows, memo.get("loteAlvoValor")||0); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), v, true); return; }
+  if (t.dataset.lote){ const [i,k] = t.dataset.lote.split("."); const r = memo.get("lote")[+i]; if (k==="on") r._on = t.checked; else if (k==="valor") r.valor = parseValor(t.value)||0; else if (k==="parte") r.parte = parseValor(t.value)||0; else { r[k] = t.value || (k==="cat"?null:t.value); if (k==="cat"){ r._catManual = true; r._catIA = false; } } if (k==="tipo" && t.value==="interno"){ r._on=false; t.closest("tr").querySelector('[data-lote$=".on"]').checked=false; } const b=$("#loteBtn"); if (b) b.textContent = rotuloLote(); alvoLote(); const c = document.querySelector(`[data-contaem="${i}"]`); if (c) c.innerHTML = contaEmTxt(r); resumoLote(); }
 });
 document.addEventListener("change", e=>{
   const t = e.target;
@@ -2280,7 +2335,7 @@ Responda em português do Brasil, direto, com números exatos da fatura, em até
   if (e.target.id==="editF"){
     const f = e.target, id = f.dataset.id, d = S.lanc.get(id); const fd = new FormData(f);
     const nd = Object.assign({}, d, {desc: fd.get("desc").trim()||d.desc, valor: parseValor(fd.get("valor"))||d.valor, data: fd.get("data")||d.data, tipo: fd.get("tipo"), cat: fd.get("tipo")==="gasto" ? (fd.get("cat")||null) : (fd.get("tipo")==="receita"?"__rec":null), meta: fd.get("meta")||d.meta||null});
-    if (fd.get("cartao") && nd.tipo==="gasto"){ nd.cartao = true; nd.fatura = fd.get("fatura") || faturaDe(nd.data); if (fd.get("pagoEm")) nd.pagoEm = fd.get("pagoEm"); else delete nd.pagoEm; } else if (nd.tipo==="pagfatura"){ delete nd.cartao; nd.fatura = fd.get("fatura") || faturaDe(nd.data); nd.cat = null; } else { delete nd.cartao; delete nd.fatura; }
+    if (fd.get("cartao") && nd.tipo==="gasto"){ nd.cartao = true; nd.fatura = fd.get("fatura") || faturaDe(nd.data); if (fd.get("pagoEm")) nd.pagoEm = fd.get("pagoEm"); else delete nd.pagoEm; if (nd.pagoEm !== d.pagoEm) delete nd.aPagar; } else if (nd.tipo==="pagfatura"){ delete nd.cartao; nd.fatura = fd.get("fatura") || faturaDe(nd.data); nd.cat = null; } else { delete nd.cartao; delete nd.fatura; }
     const total = parseValor(fd.get("valor")) || totalDe(d); const parte = parseValor(fd.get("parte")||"") || 0; const quem = String(fd.get("quem")||"").trim();
     if (nd.tipo==="gasto" && parte > 0){ nd.valorTotal = total; nd.valor = r2(total - Math.min(parte,total)); nd.divide = {quem: quem || "Alguém", valor: r2(Math.min(parte,total)), recebido: !!fd.get("recebido")}; }
     else { nd.valor = total; delete nd.valorTotal; delete nd.divide; }
@@ -2481,4 +2536,5 @@ iniciar();
 setTimeout(() => { if (S.online===null || (S.db && !S.gotLanc)){ S.travou = true; render(); } }, 12000);
 })();
 </script>
+
 </body></html>
