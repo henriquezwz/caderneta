@@ -975,7 +975,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 15:10";
+const VERSAO = "12/10 15:20";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1577,21 +1577,31 @@ function iaClaude(sample){ return {
   erro: e => ({not_granted:"Você não liberou o uso do Claude para este app.", rate_limited:"Muitas leituras seguidas. Espere um pouco.", images_unavailable:"Este aparelho não consegue enviar imagens. Cole o texto.", invalid_json:"A leitura veio confusa. Tente de novo."})[e?.code]
 };}
 function iaGemini(){
-  const MODELOS = ["gemini-flash-latest","gemini-2.5-flash","gemini-2.5-flash-lite"]; let idx = 0;
+  const MODELOS = ["gemini-2.5-flash","gemini-flash-latest","gemini-3-flash-preview","gemini-2.5-flash-lite","gemini-2.0-flash"];
+  let idx = 0; try{ const salvo = localStorage.getItem("caderneta-modelo"); if (salvo && MODELOS.includes(salvo)) idx = MODELOS.indexOf(salvo); }catch(e){}
   async function modelo(json){
     FB.aiM ||= await import(`https://www.gstatic.com/firebasejs/${FB_V}/firebase-ai.js`);
     FB.ai ||= FB.aiM.getAI(FB.app, {backend: new FB.aiM.GoogleAIBackend()});
     return FB.aiM.getGenerativeModel(FB.ai, {model: MODELOS[idx], generationConfig: json ? {responseMimeType:"application/json"} : {}});
   }
   async function tentar(json, fn){
-    for (;;){ try{ return await fn(await modelo(json)); }
-      catch(e){ const m = String(e?.message||e); if (/not found|404|not supported|unsupported model|is not available|deprecated/i.test(m) && idx < MODELOS.length-1){ idx++; continue; } throw e; } }
+    let ultimo = null;
+    for (let tent = 0; tent < MODELOS.length; tent++){
+      try{ const r = await fn(await modelo(json)); try{ localStorage.setItem("caderneta-modelo", MODELOS[idx]); }catch(e){} return r; }
+      catch(e){ ultimo = e; const m = String(e?.message||e);
+        if (e?.code==="invalid_json" || /quota|RESOURCE_EXHAUSTED|429|SERVICE_DISABLED|has not been used|API key|network|Failed to fetch/i.test(m)) throw e;
+        if (idx < MODELOS.length-1){ idx++; continue; } throw e; } }
+    throw ultimo;
   }
   const partes = imgs => Promise.all([...imgs].map(f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res({inlineData:{data:String(r.result).split(",")[1], mimeType:f.type||"image/jpeg"}}); r.onerror = rej; r.readAsDataURL(f); })));
   return {
     json: (prompt, imgs) => tentar(true, async m => { const conteudo = imgs ? [prompt, ...(await partes(imgs))] : prompt; const r = await m.generateContent(conteudo); return jsonSolto(r.response.text()); }),
     texto: (prompt, onText) => tentar(false, async m => { const r = await m.generateContentStream(prompt); let t = ""; for await (const c of r.stream){ t += c.text(); onText(t); } return t; }),
-    erro: e => { const m = String(e?.message||e); if (e?.code==="invalid_json") return "A leitura veio confusa. Tente de novo."; if (/api.*(not been used|disabled|not enabled)|firebasevertexai|firebaseml|AI Logic|SERVICE_DISABLED|PERMISSION_DENIED|403/i.test(m)) return "Falta ativar a IA no Firebase: console → AI Logic → Começar → Gemini Developer API."; if (/quota|429|RESOURCE_EXHAUSTED|rate/i.test(m)) return "Limite gratuito da IA atingido por agora. Tente mais tarde."; return null; }
+    erro: e => { const m = String(e?.message||e);
+      if (e?.code==="invalid_json") return "A leitura veio confusa. Tente de novo.";
+      if (/SERVICE_DISABLED|has not been used in project|is disabled/i.test(m)) return "A API de IA está desligada no projeto: Firebase → AI Logic → Gemini Developer API. Detalhe: " + m.replace(/https?:\/\/\S+/g,"").slice(0,160);
+      if (/quota|429|RESOURCE_EXHAUSTED/i.test(m)) return "Limite gratuito da IA atingido por agora. Tente mais tarde.";
+      return "A IA respondeu com erro (modelo " + MODELOS[idx] + "): " + m.replace(/https?:\/\/\S+/g,"").replace(/\s+/g," ").slice(0,220); }
   };
 }
 async function iaExtrair(texto, imagens){
