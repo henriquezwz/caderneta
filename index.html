@@ -1244,7 +1244,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 21:30";
+const VERSAO = "12/10 21:35";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -2835,7 +2835,8 @@ async function procurarVersao(manual){
   try{ const r = await fetch("version.json?t="+Date.now(), {cache:"no-store"}); const j = await r.json();
     if (!j.v || j.v===VERSAO){ if (manual) toast(`Você já está na versão mais nova (${VERSAO}).`); return; }
     const mexendo = document.querySelector("#layer .sheet, #layer [class*=sheet]") || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.value);
-    if (manual || (Date.now()-abertoEm < 8000 && !mexendo)) return atualizarAgora();
+    let tentou = null; try{ tentou = sessionStorage.getItem("caderneta-tentou"); }catch(e){}
+    if (manual || (Date.now()-abertoEm < 8000 && !mexendo && tentou!==j.v)){ try{ sessionStorage.setItem("caderneta-tentou", j.v); }catch(e){} return atualizarAgora(); }
     if (avisouVersao) return; avisouVersao = true;
     const d = document.createElement("div"); d.className = "conv-app"; d.id = "novaVersao";
     d.innerHTML = `<span><b>Versão nova da Caderneta</b> com correções.</span><button type="button" data-act="atualizarApp">Atualizar agora</button>`; document.body.appendChild(d);
