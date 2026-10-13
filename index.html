@@ -1244,7 +1244,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 21:10";
+const VERSAO = "12/10 21:20";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1385,7 +1385,7 @@ function viewMes(){
        : editPago?`<div class="inl"><input id="fxPagoVal" inputmode="decimal" value="${BRL.format(x.lanc.valor)}"><button data-act="confirmaPago:${x.lanc.id}">OK</button></div>`
        : `<button class="v vbtn" data-act="${x.pago?"editarPago:"+x.f.id:"pagarComValor:"+x.f.id}" title="Toque para mudar o valor">${fm(x.pago?x.lanc.valor:x.prev)}</button>`}</div>`; };
   const dzRow = S.cfg.dizimo?.ativo ? (()=>{ const pago = R.porCat.dizimo||0; const ok = pago>0 && pago >= R.dz - 0.01;
-    return `<div class="crow prev ${ok?"done":""}" style="--cc:var(--violet)"><button class="tick ${ok?"on":""}" data-act="${ok?"noop":"dizimo"}" aria-label="Marcar dízimo">${ok?ck():""}</button><div class="nm">Dízimo<small>${S.cfg.dizimo.pct}% do que entra</small></div><div class="v">${fm(Math.max(R.dz,pago))}</div></div>`; })() : "";
+    return `<div class="crow prev ${ok?"done":""}" style="--cc:var(--violet)"><button class="tick ${ok?"on":""}" data-act="${ok?"desfazerDizimo:"+m:"dizimo"}" aria-label="Marcar dízimo">${ok?ck():""}</button><div class="nm">Dízimo<small>${S.cfg.dizimo.pct}% do que entra</small></div><div class="v">${fm(Math.max(R.dz,pago))}</div></div>`; })() : "";
   const fixPanel = `<section class="panel prevpanel"><div class="panel-h"><h2 style="--hc:var(--tang)">Previsto do mês</h2><button class="act" data-act="planejar:${m}">Planejar ${MES[+m.slice(5)-1]}</button></div>
     ${(fx.length||dzRow||(R.CM&&R.CM.devido)) ? `<div class="prev-sum"><div><b>${fm0(totPago)}</b> pagos de <b>${fm0(totPrev)}</b> previstos</div><span>${nPend?`${nPend} ${nPend>1?"itens":"item"} a pagar`:"tudo pago"}</span></div>
       <div class="prev-bar"><i style="width:${totPrev?Math.min(100,totPago/totPrev*100).toFixed(1):0}%"></i></div>
@@ -1520,13 +1520,13 @@ function blocoPlano(m, R){
   const cart = !CM ? "" : `<div class="ph-sec"><div class="ph-l"><span class="ph-tit"><button class="ph-tk ${CM.pend<=0.5 && (CM.pagoMes||CM.devido)?"on":""}" data-act="${CM.pend<=0.5 && CM.pagoMes ? "desfazerCartao:"+m : "pagarCartao:"+m}" aria-label="Fatura paga">${CM.pend<=0.5 && CM.pagoMes ? ck() : ""}</button>Fatura do cartão <small>vence em ${MM}${CM.pagoMes?` · paga ${fm0(CM.pagoMes)}`:""}${CM.manual?" · valor seu":CM.nAntes?` · sem ${fm0(CM.totAntes)} já acertados antes`:""}</small></span>
       ${edCart ? `<span class="inl"><input id="cartVal" inputmode="decimal" value="${CM.devido?BRL.format(CM.devido):""}" placeholder="0,00"><button data-act="confirmaCartao:${m}">OK</button></span>` : `<button class="ph-v neg num" data-act="editarCartao:${m}" title="Toque para mudar">−${fm0(Math.max(CM.devido, CM.pagoMes))}</button>`}</div>
       ${!CM.devido && !CM.pagoMes && !CM.fi.itens.length ? `<small class="ph-dica">Toque no valor e digite quanto vem a fatura, ou mande a fatura para o app calcular.</small>` : ""}
-      ${CM.adiantarTot ? `<div class="ph-l"><span class="ph-tit"><button class="ph-tk ${CM.adiantar<=0.5?"on":""}" data-act="${CM.adiantar<=0.5?"noop":"adiantarCartao:"+m}" aria-label="Já adiantei">${CM.adiantar<=0.5?ck():""}</button>Cartão deste mês para adiantar <small>${fm0(CM.adiantarTot)} em compras de ${MM}, já contadas nos gastos${CM.adiantadoMes?` · adiantado ${fm0(CM.adiantadoMes)}`:""} · não voltam na fatura de ${MES[+CM.prox.slice(5)-1]}</small></span><b class="num">${CM.adiantar>0.5?fm0(CM.adiantar):"ok"}</b></div>` : ""}</div>`;
+      ${CM.adiantarTot ? `<div class="ph-l"><span class="ph-tit"><button class="ph-tk ${CM.adiantar<=0.5?"on":""}" data-act="${CM.adiantar<=0.5?"desfazerAdiantar:"+m:"adiantarCartao:"+m}" aria-label="Já adiantei">${CM.adiantar<=0.5?ck():""}</button>Cartão deste mês para adiantar <small>${fm0(CM.adiantarTot)} em compras de ${MM}, já contadas nos gastos${CM.adiantadoMes?` · adiantado ${fm0(CM.adiantadoMes)}`:""} · não voltam na fatura de ${MES[+CM.prox.slice(5)-1]}</small></span><b class="num">${CM.adiantar>0.5?fm0(CM.adiantar):"ok"}</b></div>` : ""}</div>`;
   const totContas = sum(contas, x=>x.pago ? x.lanc.valor : x.prev), totPlan = sum(plan, x=>x.pago ? x.lanc.valor : x.prev), totEnv = sum(envs, x=>x.prev);
   const envChip = x => { const ed = memo.get("fxPlan")===x.f.id; const pc = x.prev ? Math.min(100, x.gasto/x.prev*100) : (x.gasto?100:0);
     return `<span class="ph-env ${x.gasto>x.prev+0.5?"over":""}" style="--cc:${corCat(x.f.cat)}">${ed ? `<span class="inl">${esc(x.f.nome)} <input id="planVal" inputmode="decimal" value="${x.prev?BRL.format(x.prev):""}"><button data-act="confirmaPlanVal:${x.f.id}">OK</button></span>`
       : `<button class="ph-nm" data-act="planVal:${x.f.id}" title="Toque para mudar o previsto">${esc(x.f.nome)} <b>${fm0(x.gasto)}</b> de ${fm0(x.prev)}</button>`}<i style="width:${pc.toFixed(0)}%"></i></span>`; };
   const mt = (S.cfg.metas||[])[0]; const edG = memo.get("fxGuardar")===m, novoG = memo.get("guardarAgora")===m;
-  const guardarSec = !mt ? "" : `<div class="ph-sec"><div class="ph-l"><span class="ph-tit"><button class="ph-tk ${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?"on":""}" data-act="${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?"noop":"guardarPlano:"+m}" aria-label="Guardar o previsto">${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?ck():""}</button>Guardar em ${esc(mt.nome)} <small>${R.guardado?`guardado ${fm0(R.guardado)} · `:""}saldo ${fm0(saldoMeta(mt))}</small></span>
+  const guardarSec = !mt ? "" : `<div class="ph-sec"><div class="ph-l"><span class="ph-tit"><button class="ph-tk ${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?"on":""}" data-act="${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?"desfazerGuardar:"+m:"guardarPlano:"+m}" aria-label="Guardar o previsto">${R.metaMensal>0 && R.guardado>=R.metaMensal-0.5?ck():""}</button>Guardar em ${esc(mt.nome)} <small>${R.guardado?`guardado ${fm0(R.guardado)} · `:""}saldo ${fm0(saldoMeta(mt))}</small></span>
       ${edG ? `<span class="inl"><input id="guardVal" inputmode="decimal" value="${R.metaMensal?BRL.format(R.metaMensal):""}"><button data-act="confirmaGuardar:${m}">OK</button></span>` : `<button class="ph-v neg num" data-act="editarGuardar:${m}" title="Quanto quer guardar este mês">−${fm0(Math.max(R.metaMensal, R.guardado))}</button>`}</div>
       ${novoG ? `<div class="ph-add"><input id="guardAgora" inputmode="decimal" placeholder="Quanto você guardou agora?"><button data-act="confirmaGuardarAgora:${m}">OK</button></div>`
         : memo.get("saldoPlano")===m ? `<div class="ph-add"><input id="saldoPlanoIn" inputmode="decimal" placeholder="Saldo de hoje na ${esc(mt.nome)}" value=""><button data-act="confirmaSaldoPlano:${mt.id}">OK</button></div><small class="ph-dica">Digite quanto tem hoje na poupança (olhe no app do banco). O app passa a contar a partir daí.</small>`
@@ -2479,6 +2479,15 @@ async function acao(a, el){
     case "apagarItem": { if (el.dataset.sure!=="1"){ el.dataset.sure="1"; el.textContent="Toque de novo para apagar"; setTimeout(()=>{ if (el.isConnected){ el.dataset.sure=""; el.textContent="Apagar item"; } }, 3000); return; }
       const f = S.cfg.fixos.find(x=>x.id===arg); if (!f) return; const pos = S.cfg.fixos.indexOf(f); S.cfg.fixos.splice(pos,1); memo.delete("itemAberto"); salvarCfg(true);
       toast(`“${f.nome}” apagado do plano`, ()=>{ S.cfg.fixos.splice(pos,0,f); salvarCfg(true); render(); }); return; }
+    case "desfazerAdiantar": { const ls = [...S.lanc.entries()].filter(([,d])=>d.tipo==="pagfatura" && d.fatura>arg && mesDe(d.data)===arg);
+      if (!ls.length){ toast("Nada para desmarcar."); return; }
+      for (const [id] of ls) await apagarLanc(id); toast(`Adiantamento desmarcado (${fm(sum(ls,([,d])=>d.valor))})`, async()=>{ for (const [id,d] of ls) await gravarLanc(id, d); toast("Voltou"); }, 7000); return; }
+    case "desfazerGuardar": { const ls = [...S.lanc.entries()].filter(([,d])=>d.tipo==="aporte" && d.mes===arg).sort((a,b)=>(b[1].criado||0)-(a[1].criado||0));
+      if (!ls.length){ toast("Nada guardado neste mês para desmarcar."); return; }
+      const alvo = ls.filter(([,d])=>d.origem==="checklist"); const tirar = alvo.length ? alvo : ls;
+      for (const [id] of tirar) await apagarLanc(id); toast(`Desmarcado: ${fm(sum(tirar,([,d])=>d.valor))} saíram da poupança e voltaram para o mês`, async()=>{ for (const [id,d] of tirar) await gravarLanc(id, d); toast("Voltou"); }, 8000); return; }
+    case "desfazerDizimo": { const ls = [...S.lanc.entries()].filter(([,d])=>d.tipo==="gasto" && d.cat==="dizimo" && d.mes===arg); for (const [id] of ls) await apagarLanc(id);
+      toast("Dízimo desmarcado", async()=>{ for (const [id,d] of ls) await gravarLanc(id, d); }); return; }
     case "saldoPlano": memo.set("saldoPlano", arg); memo.delete("guardarAgora"); render(); setTimeout(()=>$("#saldoPlanoIn")?.focus(),0); return;
     case "confirmaSaldoPlano": { const v = parseValor($("#saldoPlanoIn")?.value||""); memo.delete("saldoPlano"); const mt = S.cfg.metas.find(x=>x.id===arg); if (!mt || !(v>=0)){ render(); return; }
       const antes = saldoMeta(mt); const velho = {saldoBase: mt.saldoBase, dataBase: mt.dataBase}; mt.saldoBase = v; mt.dataBase = isoDate(new Date(Date.now()+864e5)); salvarCfg(true);
