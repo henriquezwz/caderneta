@@ -1244,7 +1244,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 21:20";
+const VERSAO = "12/10 21:30";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1817,6 +1817,7 @@ function viewAjustes(){
   const regras = Object.entries(C.regras||{});
   return `<div class="grid two"><div class="col">
     ${/github\.io$/.test(location.hostname) || S.modo==="firebase" ? `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--tang)">App no celular</h2></div>
+      <div class="frow" style="grid-template-columns:1fr auto;margin-bottom:8px"><span class="note" style="margin:0">Versão ${VERSAO} · atualiza sozinha ao abrir</span><button class="btn" data-act="procurarVersao">Procurar atualização</button></div>
       ${ehApp() ? `<p class="note">Você já está usando a Caderneta instalada como app.</p>` : `<p class="note">Instala a Caderneta como aplicativo: abre em tela cheia, direto do ícone.</p><div class="btns"><button class="btn green" data-act="instalarApp">Instalar app</button></div>
       <p class="note">Já instalou e não achou? No Android o ícone também vai para a lista de todos os apps (arraste a tela inicial para cima) com o nome <b>Caderneta</b>. Se não estiver lá: Chrome → menu ⋮ → <b>Instalar app</b> (ou “Adicionar à tela inicial” → Instalar).</p>`}</section>` : ""}
     <section class="panel"><div class="panel-h"><h2 style="--hc:var(--mint)">Salários e receitas fixas</h2></div>
@@ -2488,6 +2489,8 @@ async function acao(a, el){
       for (const [id] of tirar) await apagarLanc(id); toast(`Desmarcado: ${fm(sum(tirar,([,d])=>d.valor))} saíram da poupança e voltaram para o mês`, async()=>{ for (const [id,d] of tirar) await gravarLanc(id, d); toast("Voltou"); }, 8000); return; }
     case "desfazerDizimo": { const ls = [...S.lanc.entries()].filter(([,d])=>d.tipo==="gasto" && d.cat==="dizimo" && d.mes===arg); for (const [id] of ls) await apagarLanc(id);
       toast("Dízimo desmarcado", async()=>{ for (const [id,d] of ls) await gravarLanc(id, d); }); return; }
+    case "atualizarApp": $("#novaVersao")?.remove(); atualizarAgora(); return;
+    case "procurarVersao": procurarVersao(true); return;
     case "saldoPlano": memo.set("saldoPlano", arg); memo.delete("guardarAgora"); render(); setTimeout(()=>$("#saldoPlanoIn")?.focus(),0); return;
     case "confirmaSaldoPlano": { const v = parseValor($("#saldoPlanoIn")?.value||""); memo.delete("saldoPlano"); const mt = S.cfg.metas.find(x=>x.id===arg); if (!mt || !(v>=0)){ render(); return; }
       const antes = saldoMeta(mt); const velho = {saldoBase: mt.saldoBase, dataBase: mt.dataBase}; mt.saldoBase = v; mt.dataBase = isoDate(new Date(Date.now()+864e5)); salvarCfg(true);
@@ -2825,6 +2828,25 @@ addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); pedidoInstalar 
     document.body.appendChild(d); }, 4000); });
 addEventListener("appinstalled", ()=>{ lsSet("caderneta-instalar","feito"); $("#convApp")?.remove(); pedidoInstalar = null; toast("Pronto: a Caderneta está na sua tela inicial."); });
 document.addEventListener("keydown", e=>{ const t = e.target; if (e.key==="Enter" && t.dataset && t.dataset.ren){ e.preventDefault(); t.blur(); return; } if (e.key==="Enter" && t.tagName==="INPUT" && t.closest(".inl")){ const b = t.closest(".inl").querySelector("button[data-act]"); if (b){ e.preventDefault(); b.click(); } } });
+/* atualização automática: compara a versão publicada com a deste aparelho */
+const abertoEm = Date.now(); let avisouVersao = false;
+async function procurarVersao(manual){
+  if (!/github\.io$/.test(location.hostname)){ if (manual) toast("Atualização automática só funciona no site."); return; }
+  try{ const r = await fetch("version.json?t="+Date.now(), {cache:"no-store"}); const j = await r.json();
+    if (!j.v || j.v===VERSAO){ if (manual) toast(`Você já está na versão mais nova (${VERSAO}).`); return; }
+    const mexendo = document.querySelector("#layer .sheet, #layer [class*=sheet]") || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.value);
+    if (manual || (Date.now()-abertoEm < 8000 && !mexendo)) return atualizarAgora();
+    if (avisouVersao) return; avisouVersao = true;
+    const d = document.createElement("div"); d.className = "conv-app"; d.id = "novaVersao";
+    d.innerHTML = `<span><b>Versão nova da Caderneta</b> com correções.</span><button type="button" data-act="atualizarApp">Atualizar agora</button>`; document.body.appendChild(d);
+  }catch(e){ if (manual) toast("Sem conexão para procurar atualização."); }
+}
+async function atualizarAgora(){
+  try{ const regs = await navigator.serviceWorker?.getRegistrations?.() || []; for (const r of regs) await r.update().catch(()=>{}); const ks = await caches?.keys?.() || []; for (const k of ks) await caches.delete(k); }catch(e){}
+  location.replace(location.pathname + "?v=" + Date.now() + (location.hash||""));
+}
+setTimeout(()=>procurarVersao(false), 1500);
+document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState==="visible") procurarVersao(false); });
 /* nova categoria direto do seletor */
 document.addEventListener("focusin", e=>{ const t = e.target; if (t.tagName==="SELECT" && t.querySelector('option[value="__nova"]')) t.dataset.prev = t.value; }, true);
 document.addEventListener("change", e=>{ const t = e.target; if (t.tagName!=="SELECT" || t.value!=="__nova") return;
