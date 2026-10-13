@@ -1123,11 +1123,11 @@ function resumo(m){
   const restantes = m===atual ? dim - dia + 1 : (m>atual ? dim : 0);
   const dzPend = Math.max(0, dz - (porCat.dizimo||0));
   const guardarPend = Math.max(0, metaMensal - guardado);
-  const caixaLivre = receitaPrev - saiu - fixosPend - cartPend - guardarPend - dzPend + ajuste;
+  const caixaLivre = receitaPrev - saiu - guardado - fixosPend - cartPend - guardarPend - dzPend + ajuste;
   // planejamento do início do mês: recebo − fatura − contas − planejados − guardar = sobra para o dia a dia
   const contasPrev = sum(itens, f=>previsto(f, m));
   const cartPrev = MF ? Math.max(CM.devido, CM.pagoMes) : 0;
-  const planSobra = receitaPrev - cartPrev - contasPrev - metaMensal - dz + ajuste;
+  const planSobra = receitaPrev - cartPrev - contasPrev - Math.max(metaMensal, guardado) - dz + ajuste;
   const porDia = restantes>0 ? Math.max(0, caixaLivre)/restantes : 0;
   const decorrido = m===atual ? dia/dim : (m<atual ? 1 : 0);
   return {L, gastos, receitas, aportes, entrou, saiu, guardado, receitaPrev, porCat, orc, dz, fixosStatus, fixosPend,
@@ -1244,7 +1244,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 20:05";
+const VERSAO = "12/10 21:10";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
