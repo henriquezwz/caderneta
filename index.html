@@ -616,6 +616,15 @@ body.deslogado .quick,body.deslogado .tabs,body.deslogado .tabs-top,body.desloga
 .entrada h1{font-size:30px;letter-spacing:-.03em;margin:0 0 8px}
 .entrada .lead{color:var(--muted);margin:0 0 22px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+.panel.atraso{border:1.5px solid var(--tang);background:linear-gradient(180deg,var(--tang-soft),var(--surface) 75%)}
+.panel.atraso .at-top{display:flex;gap:12px;align-items:center}
+.panel.atraso .at-n.num{font-size:40px;font-weight:800;color:var(--tang);line-height:1;letter-spacing:-.03em}
+.panel.atraso .at-top b{display:block;font-size:16px}.panel.atraso .at-top span{font-size:13.5px;color:var(--muted)}.panel.atraso .at-top span b{display:inline;font-size:13.5px;color:var(--ink)}
+.panel.atraso .btns{margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap}.panel.atraso .btn{min-height:40px}
+.sheet .desde-op{display:grid;gap:8px;margin:12px 0}
+.sheet .desde-b{display:grid;gap:2px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;min-height:56px}
+.sheet .desde-b b{font-size:15px}.sheet .desde-b small{color:var(--muted);font-size:13px}
+.lote-desde{background:var(--tang-soft);border-radius:10px;padding:8px 12px;font-size:13px;margin:6px 0}
 </style>
 
 <header class="top" id="top">
@@ -1244,7 +1253,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "12/10 21:35";
+const VERSAO = "18/10 12:40";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1311,6 +1320,25 @@ function renderInterno(){
   sy.querySelector("span").textContent = S.visitante ? "neste navegador" : S.db ? "salvo" : (S.online===null ? "conectando" : "só neste aparelho");
 }
 
+/* ---------- desde quando está desatualizado (pra saber de onde voltar) ---------- */
+const ORIGENS_PLANO = ["fixa","ajuste","checklist","adiantamento"];
+function ultimaAtualizacao(){ const h = hoje(); let ult = "";
+  for (const d of S.lanc.values()){ if (!d || !d.data || d.data > h || ORIGENS_PLANO.includes(d.origem)) continue; if (d.parc && !/^1\//.test(d.parc)) continue; if (d.data > ult) ult = d.data; }
+  if (S.cfg.emDia && S.cfg.emDia > ult) ult = S.cfg.emDia; return ult || null; }
+const diasEntre = (a, b) => Math.round((new Date(b+"T12:00:00") - new Date(a+"T12:00:00")) / 864e5);
+const dataBonita = d => new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"short", day:"numeric", month:"short"}).replace(/\./g,"");
+function blocoAtraso(m){ if (m !== mesDe(hoje()) || !S.gotLanc || !S.lanc.size) return ""; const u = ultimaAtualizacao(); if (!u) return ""; const n = diasEntre(u, hoje()); if (n < 2) return "";
+  return `<section class="panel atraso"><div class="at-top"><span class="at-n num">${n}</span><div><b>dias sem lançar</b><span>Seus lançamentos vão até <b>${esc(dataBonita(u))}</b>. Volte a partir daí.</span></div></div>
+    <div class="btns"><button class="btn solid" data-act="atualizarDesde:${u}">Mandar extrato desde ${esc(dataBonita(u).replace(/^\S+\s/,""))}</button><button class="btn" data-act="emDia">Já está em dia</button></div></section>`; }
+function folhaDesde(d){ memo.set("desde", {data:d, t:Date.now()});
+  abrirFolha(`<h3>Atualizar desde ${esc(dataBonita(d))}</h3><p class="lead">Mande o extrato da conta ou do cartão. Eu deixo de fora o que é de antes de ${esc(dataBonita(d))}, reconheço o que já está no app e te mostro o resto para você conferir antes de lançar.</p>
+    <div class="desde-op">
+      <button class="desde-b" data-act="desdeArq"><b>Arquivo do banco</b><small>OFX ou CSV exportado no app do banco</small></button>
+      <button class="desde-b" data-act="desdePrint"><b>Prints do extrato</b><small>até 5 fotos da tela, a IA lê</small></button>
+      <button class="desde-b" data-act="desdeColar"><b>Colar texto</b><small>notificações ou linhas do extrato</small></button>
+    </div>
+    <p class="note">No app do banco, procure “exportar extrato” e escolha o período começando em ${esc(dataBonita(d))}. Se vier mais coisa, tudo bem: o que é de antes eu ignoro.</p>
+    <div class="sheet-foot"><button type="button" class="btn" data-close>Fechar</button></div>`); }
 function viewMes(){
   const m = S.mes, R = resumo(m), atual = mesDe(hoje());
   const vazio = S.db ? !S.gotLanc : S.online===null;
@@ -1427,7 +1455,7 @@ function viewMes(){
   if (vazio && S.travou) return `<div class="grid"><div class="panel empty"><b>Seus dados não chegaram.</b>O Firebase não respondeu.${ultimoErro?`<br><small>${esc(ultimoErro.slice(0,300))}</small>`:""}<div class="btns" style="justify-content:center"><button class="btn" data-act="sair">Sair e usar sem login</button><button class="btn" onclick="location.reload()">Recarregar</button></div><p class="note">versão ${VERSAO}</p></div></div>`;
   if (vazio) return `<div class="grid"><div class="panel empty"><b>Carregando sua caderneta…</b>${S.modo==="firebase" ? "Conectando ao seu Firebase. Se passar de alguns segundos, recarregue a página." : "Se demorar, abra este link no Claude conectado à sua conta."}</div></div>`;
   const cartPanel = painelCartao(m);
-  return `<div class="grid two"><div class="col">${hero}${alertas.replace("alerts only-d","alerts only-m")}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${painelInsights(m)}${alertas}${recPanel}${painelReceber()}${metas}</div></div>`;
+  return `<div class="grid two"><div class="col">${blocoAtraso(m)}${hero}${alertas.replace("alerts only-d","alerts only-m")}${cartPanel}${envPanel}${parcPanel}</div><div class="col">${painelInsights(m)}${alertas}${recPanel}${painelReceber()}${metas}</div></div>`;
 }
 function painelAcompanha(m, R){
   const MM = MES[+m.slice(5)-1], aberto = memo.get("itemAberto"), atual = mesDe(hoje());
@@ -2000,7 +2028,10 @@ Responda só com JSON: [{"i": índice, "cat": "id"}]`;
 }
 function estadoLinha(r){ return r._dupId && !r._on ? (r.cartao && r.tipo==="gasto" && r.pago ? "pago" : "existe") : !r._on ? "fora" : (r.cartao && r.tipo==="gasto" && r.pago) ? "pago" : "lancar"; }
 function folhaLote(rows, titulo, nota, venc, manter){
-  if (!manter){
+  if (!manter){ const ds = memo.get("desde");
+    if (ds && Date.now() - ds.t < 10*60e3){ memo.delete("desde"); const antes = rows.length; for (let i=rows.length-1;i>=0;i--) if (rows[i].data && rows[i].data < ds.data) rows.splice(i,1); const fora = antes - rows.length;
+      if (!rows.length){ fecharFolha(); toast(`Nada novo desde ${dataBonita(ds.data)}: ${fora} ${fora===1?"lançamento é":"lançamentos são"} de antes.`, null, 6000); return; }
+      titulo = `${rows.length} ${rows.length>1?"lançamentos":"lançamento"} desde ${dataBonita(ds.data)}`; nota = `${fora?`Deixei de fora ${fora} de antes de ${dataBonita(ds.data)}. `:""}O que já estava no app aparece marcado como “já existe”. Confira o resto e toque em lançar.`; }
     const usados = new Set();
     rows.forEach(r=>{ const id = acharDuplicado(r); if (id && !usados.has(id)){ usados.add(id); r._dupId = id; r._on = false; const ex = S.lanc.get(id);
         // compra que já estava: mantém o que você marcou antes (pago ou não)
@@ -2677,6 +2708,11 @@ async function acao(a, el){
     case "importBackup": { const inp = document.createElement("input"); inp.type="file"; inp.accept=".json,application/json"; inp.onchange = async ()=>{ const f = inp.files[0]; if (f) importarBackup(await f.text()); }; inp.click(); return; }
     case "sair": try{ await FB.authM.signOut(FB.auth); }catch(e){} location.reload(); return;
     case "escolherCsv": $("#fileIn").click(); return;
+    case "atualizarDesde": folhaDesde(arg); return;
+    case "desdeArq": memo.set("desde", Object.assign(memo.get("desde")||{}, {t:Date.now()})); $("#fileIn").click(); return;
+    case "desdePrint": if (!S.ai){ toast("A leitura de prints precisa da IA: entre com sua conta."); return; } memo.set("desde", Object.assign(memo.get("desde")||{}, {t:Date.now()})); fecharFolha(); $("#shotIn").click(); return;
+    case "desdeColar": folhaColar(); return;
+    case "emDia": { const antes = S.cfg.emDia || null; S.cfg.emDia = hoje(); salvarCfg(true); render(); toast("Combinado: está em dia até hoje.", ()=>{ if (antes) S.cfg.emDia = antes; else delete S.cfg.emDia; salvarCfg(true); render(); }); return; }
     case "colarLer": { const t = $("#pasteIn").value; if (!t.trim()) return; const csv = importarCSV(t);
       if (csv && csv.length){ folhaLote(csv, `${csv.length} lançamentos do extrato`); return; }
       const ps = parseTexto(t).itens;
