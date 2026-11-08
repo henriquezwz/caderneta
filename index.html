@@ -1266,7 +1266,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "08/11 12:55";
+const VERSAO = "08/11 13:20";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -2004,13 +2004,13 @@ function candidatosPagos(rows){
   const atual = mesAtual();
   return rows.filter(r => r.cartao && r.tipo==="gasto" && r._on && TIPO_COTIDIANO(r.cat) && mesDe(r.data) <= atual && mesDe(r.data) < (r.fatura||atual));
 }
-function sugerirPagos(rows, alvo){
+function sugerirPagos(rows, alvo, explicito){
   rows.forEach(r => { if (r._sug){ r.pago = false; r._sug = false; r._jaPago = false; } });
   const cand = candidatosPagos(rows).filter(r => !r.pago).sort((a,b)=>a.data<b.data?-1:1);
   const passados = cand.filter(r => !ehDeFaturaFutura(r)), atuais = cand.filter(ehDeFaturaFutura);
   const escolhidos = [];
   if (alvo > 0){ let soma = 0; for (const r of passados){ if (soma + (+r.valor||0) <= alvo + 0.01){ escolhidos.push(r); soma += +r.valor||0; } } }
-  else escolhidos.push(...passados);
+  else if (explicito) escolhidos.push(...passados); // sem o valor do banco, não chuta o que foi pago: a estimativa não pode ficar menor que a realidade
   escolhidos.concat(atuais).forEach(r => { r.pago = true; r._sug = true; });
   if (modoFatura()) rows.forEach(r => { if (r.cartao && r.tipo==="gasto" && r._on && !r.pago && !r.parcInfo && mesDe(r.data) < (r.fatura||"") && acharItemPrevisto(r.desc, mesDe(r.data), true)){ r.pago = true; r._sug = true; r.pagoMes = mesDe(r.data); } });
   const por = {}, porA = {}; escolhidos.forEach(r => { const k = TIPO_COTIDIANO(r.cat); por[k] = (por[k]||0) + (+r.valor||0); });
@@ -2262,15 +2262,16 @@ function fatLote(rows){
   const ids = new Set(rows.map(r=>r._dupId).filter(Boolean));
   const pgfRows = sum(rows.filter(r=>r.tipo==="pagfatura" && (r._on||r._dupId)), r=>+r.valor||0);
   const pgfApp = sum([...S.lanc.entries()].filter(([id,d])=>d.tipo==="pagfatura" && d.fatura===venc && !ids.has(id)), ([,d])=>d.valor);
-  const pago = r2(pagos + pgfRows + pgfApp), falta = Math.max(0, r2(total - pago));
-  const sepT = sum(cs.filter(r=>r.sep && !r.pago), r=>+r.valor||0);
   const txt = ($("#loteFalta")?.value||"").trim(), fb = txt ? parseValor(txt) : null;
+  const estPago = r2(pagos + pgfRows + pgfApp), estFalta = Math.max(0, r2(total - estPago));
+  const pago = fb!=null ? Math.max(0, r2(total - fb)) : estPago, falta = fb!=null ? Math.max(0, fb) : estFalta;
+  const sepT = sum(cs.filter(r=>r.sep && !r.pago), r=>+r.valor||0);
   const notas = [];
-  if (pago>0) notas.push(`Já pago: ${pagos?`${fm(pagos)} em compras marcadas como “Já paguei”`:""}${pagos&&(pgfRows+pgfApp)?" + ":""}${(pgfRows+pgfApp)?`${fm(pgfRows+pgfApp)} em pagamentos da fatura`:""}.`);
-  else notas.push("Nada marcado como pago ainda. Se você adiantou alguma compra, escolha “Já paguei” nela.");
+  if (fb==null && estPago<=0.5) notas.push("Só conto como pago o que você marcar ou o que veio como pagamento no arquivo, para não dar menos do que o banco cobra.");
+  else if (estPago>0) notas.push(`Marcado como pago: ${pagos?`${fm(pagos)} em compras marcadas como “Já paguei”`:""}${pagos&&(pgfRows+pgfApp)?" + ":""}${(pgfRows+pgfApp)?`${fm(pgfRows+pgfApp)} em pagamentos da fatura`:""}.`);
   if (aPagar>0) notas.push(`${fm(aPagar)} são para pagar este mês (comida e dia a dia).`);
   if (sepT>0) notas.push(`${fm(sepT)} vão para itens do previsto e não contam no valor da fatura.`);
-  notas.push(fb!=null ? `Pelo banco faltam ${fm(fb)}${Math.abs(fb-falta)<0.5?" · <b style='color:var(--mint,#12B07F)'>bateu com a estimativa</b>":` · diferença de ${fm(Math.abs(fb-falta))} para a estimativa`}.` : "Para conferir, digite abaixo quanto o banco diz que falta.");
+  notas.push(fb!=null ? (Math.abs(fb-estFalta)<0.5 ? "Valor do banco: <b style='color:var(--mint,#12B07F)'>bate com as compras marcadas</b>." : estFalta>fb ? `Valor do banco. As compras marcadas ainda deixam ${fm(estFalta-fb)} a mais: use o botão abaixo para marcar o que você adiantou.` : `Valor do banco. Há ${fm(fb-estFalta)} a menos marcado como pago do que o banco indica.`) : "Quando tiver, digite abaixo quanto o banco diz que falta: eu uso esse valor e marco o que você já adiantou.");
   return `<div><small>Total da fatura</small><b class="num">${fm(total)}</b></div><div><small>Já paguei adiantado</small><b class="num">${fm(pago)}</b></div><div class="falta"><small>Falta pagar (estimativa)</small><b class="num">${fm(falta)}</b></div><p class="note">${notas.join(" ")}</p>`;
 }
 function resumoLote(){
@@ -2712,7 +2713,7 @@ async function acao(a, el){
       const b = $("#loteBtn"); if (b) b.textContent = rotuloLote(); resumoLote(); alvoLote(); return; }
     case "loteAbrir": { const ed = document.querySelector(`[data-edit-lote="${arg}"]`); if (ed){ const abrir = ed.hidden; if (!abrir){ folhaLote(memo.get("lote"), memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); return; } ed.hidden = false; ed.querySelector("input")?.focus(); } return; }
     case "desfazerSug": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r._sug){ r.pago = false; r._sug = false; r._jaPago = false; } }); memo.set("sugPago", {n:0,total:0,por:{},nA:0,totalA:0,porA:{}}); memo.set("loteMexeu", true); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); return; }
-    case "refazerSug": { const rows = memo.get("lote"); const n = sugerirPagos(rows, memo.get("loteAlvoValor")||0); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); if (!n) toast("Não achei compras de comida ou dia a dia para marcar nesta fatura."); return; }
+    case "refazerSug": { const rows = memo.get("lote"); const n = sugerirPagos(rows, memo.get("loteAlvoValor")||0, true); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); if (!n) toast("Não achei compras de comida ou dia a dia para marcar nesta fatura."); return; }
     case "loteEhFatura": { const rows = memo.get("lote"); rows.forEach(r=>{ if (r.tipo==="gasto") r.cartao = true; }); sugerirPagos(rows, 0); folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), null, true); return; }
     case "lotePagasAuto": { const rows = memo.get("lote"); const alvo = memo.get("loteAlvoValor")||0; let soma = 0;
       memo.set("loteMexeu", true);
@@ -2878,8 +2879,9 @@ document.addEventListener("change", e=>{
   if (t.id==="fCat"){ S.ext.cat = t.value; render(); return; }
   if (t.id==="loteFalta"){ memo.set("loteFalta", t.value); alvoLote(); const rows = memo.get("lote")||[]; const alvo = memo.get("loteAlvoValor")||0;
     const marcado = sum(rows.filter(x=>x.cartao && x.tipo==="gasto" && x._on && x.pago), x=>+x.valor||0);
-    if (t.value.trim() && marcado > alvo + 0.5){ rows.forEach(x=>{ if (x.pago){ x.pago = false; x._sug = false; } }); if (alvo > 0.5) sugerirPagos(rows, alvo); else memo.set("sugPago", {n:0,total:0,por:{}});
-      folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); toast(`Ajustei as marcações para não passar de ${fm(Math.max(0,alvo))} já pagos.`, null, 6000); }
+    const abaixo = alvo > 0.5 && marcado < alvo - 0.5 && !rows.some(x=>x.pago && !x._sug && !x._exPago);
+    if (t.value.trim() && (marcado > alvo + 0.5 || abaixo)){ rows.forEach(x=>{ if (x.pago){ x.pago = false; x._sug = false; } }); if (alvo > 0.5) sugerirPagos(rows, alvo); else memo.set("sugPago", {n:0,total:0,por:{}});
+      folhaLote(rows, memo.get("loteTitulo"), memo.get("loteNota"), memo.get("loteVenc"), true); toast(abaixo ? `Marquei as compras mais antigas como já pagas até chegar em ${fm(alvo)}. Revise se quiser.` : `Ajustei as marcações para não passar de ${fm(Math.max(0,alvo))} já pagos.`, null, 6000); }
     return; }
   if (t.dataset.lote || t.id==="loteVenc" || t.id==="lotePagoMes" || t.id==="pagasMes"){ t.dispatchEvent(new Event("input",{bubbles:true})); return; }
   if (t.dataset.cfg){
