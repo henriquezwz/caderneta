@@ -490,6 +490,7 @@ main{max-width:1120px;margin:18px auto 0}
 .conv-app span{flex:1 1 220px}.conv-app button{border:0;border-radius:10px;padding:9px 14px;font-weight:700;background:var(--tang);color:#fff;cursor:pointer}.conv-app button.x{background:none;color:var(--muted);padding:9px 6px}
 .ph-links{display:flex;flex-wrap:wrap;gap:4px 16px}
 .sep-note{font-size:11.5px;margin:4px 0 0;color:var(--muted)}
+.lote-fat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}.lote-fat:empty{display:none}.lote-fat>div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;min-width:0}.lote-fat small{display:block;font-size:11px;color:var(--muted);line-height:1.2;margin-bottom:2px}.lote-fat b{font-size:14px;overflow-wrap:anywhere}.lote-fat .falta{border-color:var(--tang,#FF6A2B)}.lote-fat .falta b{color:var(--tang,#FF6A2B)}.lote-fat .note{grid-column:1/-1;margin:0;font-size:12px}
 .lc-sep{display:flex;align-items:center;gap:8px;margin-top:6px;min-height:40px}.lc-sep>button:first-child{background:none;border:0;color:var(--blue);font-weight:700;font-size:13px;padding:8px 0}
 .lc-sep.on{background:var(--violet-soft,#ECE6FF);border-radius:10px;padding:4px 6px 4px 10px}.lc-sep.on span{font-size:12px;color:var(--muted);white-space:nowrap}.lc-sep.on input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-weight:700;color:var(--ink);padding:8px 4px}.lc-sep.on button{border:0;background:none;color:var(--muted);min-width:40px;min-height:40px;font-size:16px}
 .ph-min{display:flex;width:100%;justify-content:space-between;align-items:center;text-align:left;cursor:pointer;color:var(--ink);font:inherit}.ph-min span:first-child{display:grid;gap:2px}.ph-min small{color:var(--muted);font-size:12.5px}.ph-chev{font-size:18px;color:var(--tang)}
@@ -1265,7 +1266,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "08/11 12:40";
+const VERSAO = "08/11 12:55";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -2069,6 +2070,7 @@ function folhaLote(rows, titulo, nota, venc, manter){
   abrirFolha(`<h3>${esc(titulo)}</h3><p class="lead">${esc(nota||"Para cada compra, escolha: Lançar, Já paguei ou Não lançar. Toque na compra para editar.")}</p>
     ${ehFatura ? `<div class="fatbox">
         <label>Fatura do cartão que vence em <select id="loteVenc">${opcoesVenc.map(m=>`<option value="${m}" ${m===venc?"selected":""}>${mesLongo(m)}</option>`).join("")}</select></label>
+        <div id="loteFat" class="lote-fat"></div>
         ${(()=>{ const sp = memo.get("sugPago"); const tot = {}; rows.filter(r=>r.cartao && r.tipo==="gasto" && (r._on||r._dupId)).forEach(r=>{ const k = TIPO_COTIDIANO(r.cat) || "outras compras"; tot[k]=(tot[k]||0)+(+r.valor||0); });
           return `<div class="fb-cot"><b>O que tem nesta fatura</b><div>${Object.entries(tot).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span class="pill">${esc(k)} ${fm0(v)}</span>`).join(" ")}</div>
           ${venc > mesAtual() ? `<div class="sugbox futura"><b>Esta fatura só vence em ${mesLongo(venc)}</b><span>Comida, gasolina e dia a dia de ${mesLongo(mesAtual())} que vieram nela ficam como <b>“Pagar este mês”</b>: você acerta agora, junto com as contas de ${MES[+mesAtual().slice(5)-1]}, e elas saem do que fica para ${MES[+venc.slice(5)-1]}. Parcelas e compras maiores continuam na fatura.</span>${sp && sp.nA ? `<span>Marquei ${sp.nA} ${sp.nA>1?"compras":"compra"}: <b>${fm(sp.totalA)}</b> (${Object.entries(sp.porA).map(([k,v])=>`${k} ${fm0(v)}`).join(", ")}).</span>` : ""}</div>` : ""}
@@ -2103,6 +2105,7 @@ function folhaLote(rows, titulo, nota, venc, manter){
   resumoLote(); alvoLote();
 }
 function alvoLote(){
+  const fe = $("#loteFat"); if (fe) fe.innerHTML = fatLote(memo.get("lote")||[]);
   const el = $("#loteAlvo"); if (!el) return; const rows = memo.get("lote")||[];
   const txt = $("#loteFalta")?.value||""; const falta = parseValor(txt);
   const total = sum(rows.filter(r=>r.cartao && r.tipo==="gasto" && (r._on || r._dupId)), r=>+r.valor||0);
@@ -2249,8 +2252,29 @@ Use no máximo 6 itens em economias, 6 em alertas, 8 em categorias. Valores em r
 }
 function contaEmTxt(r){ if (r.cartao && r.tipo==="gasto" && r.pago){ const m = mesPago(r); return ehAPagar(r) ? `<span class="pill" style="background:var(--tang-soft,#FFE9DA);color:var(--tang)">pagar em ${mesAb(m)}</span>` : `<span class="pill" style="background:var(--violet-soft);color:var(--violet)">${mesAb(m)} ✓</span>`; }
   if (!r.cartao || r.tipo!=="gasto") return `<span class="pill">${mesAb(mesDe(r.data))}</span>`; if (modoFatura()) return `<span class="pill y">fatura ${mesAb(r.fatura)}</span>`; const m = mesEfetivo({cartao:true, tipo:"gasto", fatura:r.fatura, cat:r.cat, data:r.data, parc:r.parcInfo}); return `<span class="pill ${m===mesDe(r.data)?"g":"y"}">${mesAb(m)}</span>`; }
+/* resumo claro da fatura: total, o que já foi pago adiantado e a estimativa do que falta */
+function fatLote(rows){
+  if (!rows.some(r=>r.cartao && r.tipo==="gasto")) return "";
+  const venc = memo.get("loteVenc");
+  const cs = rows.filter(r=>r.cartao && r.tipo==="gasto" && (r._on||r._dupId));
+  const total = r2(sum(cs, r=>+r.valor||0));
+  const pagos = sum(cs.filter(r=>r.pago && !ehAPagar(r)), r=>+r.valor||0), aPagar = sum(cs.filter(ehAPagar), r=>+r.valor||0);
+  const ids = new Set(rows.map(r=>r._dupId).filter(Boolean));
+  const pgfRows = sum(rows.filter(r=>r.tipo==="pagfatura" && (r._on||r._dupId)), r=>+r.valor||0);
+  const pgfApp = sum([...S.lanc.entries()].filter(([id,d])=>d.tipo==="pagfatura" && d.fatura===venc && !ids.has(id)), ([,d])=>d.valor);
+  const pago = r2(pagos + pgfRows + pgfApp), falta = Math.max(0, r2(total - pago));
+  const sepT = sum(cs.filter(r=>r.sep && !r.pago), r=>+r.valor||0);
+  const txt = ($("#loteFalta")?.value||"").trim(), fb = txt ? parseValor(txt) : null;
+  const notas = [];
+  if (pago>0) notas.push(`Já pago: ${pagos?`${fm(pagos)} em compras marcadas como “Já paguei”`:""}${pagos&&(pgfRows+pgfApp)?" + ":""}${(pgfRows+pgfApp)?`${fm(pgfRows+pgfApp)} em pagamentos da fatura`:""}.`);
+  else notas.push("Nada marcado como pago ainda. Se você adiantou alguma compra, escolha “Já paguei” nela.");
+  if (aPagar>0) notas.push(`${fm(aPagar)} são para pagar este mês (comida e dia a dia).`);
+  if (sepT>0) notas.push(`${fm(sepT)} vão para itens do previsto e não contam no valor da fatura.`);
+  notas.push(fb!=null ? `Pelo banco faltam ${fm(fb)}${Math.abs(fb-falta)<0.5?" · <b style='color:var(--mint,#12B07F)'>bateu com a estimativa</b>":` · diferença de ${fm(Math.abs(fb-falta))} para a estimativa`}.` : "Para conferir, digite abaixo quanto o banco diz que falta.");
+  return `<div><small>Total da fatura</small><b class="num">${fm(total)}</b></div><div><small>Já paguei adiantado</small><b class="num">${fm(pago)}</b></div><div class="falta"><small>Falta pagar (estimativa)</small><b class="num">${fm(falta)}</b></div><p class="note">${notas.join(" ")}</p>`;
+}
 function resumoLote(){
-  const rows = memo.get("lote")||[]; const el = $("#loteResumo"); if (!el) return;
+  const rows = memo.get("lote")||[]; const fe = $("#loteFat"); if (fe) fe.innerHTML = fatLote(rows); const el = $("#loteResumo"); if (!el) return;
   const pgf = sum(rows.filter(r=>r.tipo==="pagfatura" && (r._on||r._dupId)), r=>+r.valor||0);
   const por = {}; let pagos = 0, aPagar = 0, tot = 0; rows.filter(r=>r._on && r.cartao && r.tipo==="gasto").forEach(r=>{ const m = r.pago ? mesPago(r) : modoFatura() ? r.fatura : mesEfetivo({cartao:true,tipo:"gasto",fatura:r.fatura,cat:r.cat,data:r.data,parc:r.parcInfo}); por[m]=(por[m]||0)+(+r.valor||0); tot += +r.valor||0; if (ehAPagar(r)) aPagar += +r.valor||0; else if (r.pago) pagos += +r.valor||0; });
   el.innerHTML = Object.keys(por).sort().map(m=>`<b>${fm(por[m])}</b> pesam em ${mesLongo(m)}`).join(" · ") + (aPagar?` · pagar este mês <b>${fm(aPagar)}</b>`:"") + ((pagos||pgf||aPagar)?` · ${pagos+pgf?`já pago <b>${fm(pagos+pgf)}</b>, `:""}fica para a fatura <b>${fm(Math.max(0,tot-pagos-pgf-aPagar))}</b>`:"");
