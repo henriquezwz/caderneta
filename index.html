@@ -1062,24 +1062,20 @@ const modoFatura = () => S.cfg.faturaItem !== false;
 function cartaoDoMes(m){
   // fatura que vence em m: só as compras que ainda não foram acertadas antes (as do dia a dia já pesaram e foram adiantadas no mês da compra)
   const prox = addMes(m,1), fi = faturaInfo(m);
-  const sepOk = d => !!d.sep && (S.cfg.fixos||[]).some(f=>f.id===d.sep);
   const naConta = fi.itens.filter(d=>d.mes===m), antes = fi.itens.filter(d=>d.mes<m);
-  const sepItens = naConta.filter(sepOk), sepTot = r2(sum(sepItens, totalDe));
-  const sepNomes = [...new Set(sepItens.map(d=>(S.cfg.fixos||[]).find(f=>f.id===d.sep)?.nome).filter(Boolean))];
-  const auto = r2(sum(naConta.filter(d=>!sepOk(d)), totalDe));
+  const auto = r2(sum(naConta, totalDe));
   const ov = S.cfg.planos?.[m]?.__cartao;
   const devido = ov!=null ? +ov||0 : auto;
   const pagoBruto = sum([...S.lanc.values()].filter(d=>d.tipo==="pagfatura" && d.fatura===m && mesDe(d.data)===m), d=>d.valor);
-  // pagou a fatura inteira (com os itens separados): os separados contam como pagos e só o resto vale como "fatura"
-  const sepPago = sepTot>0 && pagoBruto >= devido + sepTot - 0.5;
-  const pagoMes = sepPago ? r2(pagoBruto - sepTot) : pagoBruto;
+  const pagoMes = pagoBruto;
   const pend = Math.max(0, r2(devido - pagoMes));
+  const paga = pagoMes>0 && pend<=0.5;
   // compras do cartão deste mês que você adianta (já contam nos gastos deste mês)
   const adiantarItens = [...S.lanc.values()].filter(d=>d.cartao && d.tipo==="gasto" && d.mes===m && d.fatura>m);
   const adiantarTot = r2(sum(adiantarItens, totalDe));
   const adiantadoMes = sum([...S.lanc.values()].filter(d=>d.tipo==="pagfatura" && d.fatura>m && mesDe(d.data)===m), d=>d.valor);
   const adiantar = Math.max(0, r2(adiantarTot - adiantadoMes));
-  return {m, prox, fi, sepItens, sepTot, sepPago, sepNomes, pagoBruto, bruto: r2(devido + sepTot), devido, auto, manual: ov!=null, pagoMes, pend, adiantar, adiantarTot, adiantadoMes, nAntes: antes.length, totAntes: r2(sum(antes, totalDe)), nItens: naConta.length};
+  return {m, prox, fi, pagoBruto, paga, devido, auto, manual: ov!=null, pagoMes, pend, adiantar, adiantarTot, adiantadoMes, nAntes: antes.length, totAntes: r2(sum(antes, totalDe)), nItens: naConta.length};
 }
 /* cada gasto do mês "entra" num item do plano: pelo vínculo, pelo que você ensinou, pela categoria do orçamento, ou cai em "Outros (dia a dia)" */
 const NOME_CATS = [[/^(saidas?|lazer|role)/,["saidas","delivery"]],[/^(ifood|delivery)/,["delivery"]],[/^(gasolina|combust|transporte|uber)/,["transporte"]],[/^(compras|mercado|feira|supermerc)/,["mercado"]],[/^(farmacia|saude|remedio)/,["saude"]],[/^(outros|dia a dia)/,["__resto"]]];
@@ -1094,6 +1090,7 @@ function atribuir(gastos, itens){
     let it = null;
     if (g.item && g.item!=="__fora") it = byId.get(g.item) || porNome.get(g.item) || null;
     if (!it && g.fixo) it = byId.get(g.fixo) || null;
+    if (!it && g.sep) it = byId.get(g.sep) || null;
     if (!it && g.item!=="__fora"){ const r = S.cfg.regrasItem?.[keyOf(g.desc)]; if (r==="__fora") g._fora = true; else if (r) it = byId.get(r) || porNome.get(r) || null; }
     if (!it && g.item!=="__fora" && !g._fora){ const n = norm(g.desc);
       it = contas.find(c => c.pal.some(w => new RegExp("\\b"+w).test(n)))?.f || null;
@@ -1107,10 +1104,10 @@ function lancDoMes(m){ return [...S.lanc.entries()].filter(([,d])=>d.mes===m).ma
 function resumo(m){
   const L = lancDoMes(m);
   const MF = modoFatura(), CM = MF ? cartaoDoMes(m) : null;
-  const gastos = L.filter(d=>d.tipo==="gasto" && !(MF && d.cartao && d.mes===d.fatura)), receitas = L.filter(d=>d.tipo==="receita");
+  const gastos = L.filter(d=>d.tipo==="gasto"), cartaoL = MF ? gastos.filter(d=>d.cartao && d.mes===d.fatura) : [], gastosCx = MF ? gastos.filter(d=>!(d.cartao && d.mes===d.fatura)) : gastos, receitas = L.filter(d=>d.tipo==="receita");
   const aportes = L.filter(d=>d.tipo==="aporte"), resgates = L.filter(d=>d.tipo==="resgate");
   const saiuCartao = MF ? CM.pagoMes : 0;
-  const entrou = sum(receitas,d=>d.valor), saiu = sum(gastos,d=>d.valor) + saiuCartao + (MF && CM.sepPago ? CM.sepTot : 0);
+  const entrou = sum(receitas,d=>d.valor), saiu = sum(gastosCx,d=>d.valor) + saiuCartao;
   const cartPend = MF ? CM.pend : 0;
   const guardado = sum(aportes,d=>d.valor) - sum(resgates,d=>d.valor);
   // receitas previstas: cada receita fixa conta pelo recebido, senão pelo esperado
@@ -1125,15 +1122,16 @@ function resumo(m){
   // itens "envelope" (Saídas, Gasolina, Dia a dia…): não se marcam como pagos; o que você gasta na categoria vai consumindo o previsto
   const AT = atribuir(gastos, itens);
   const fixosStatus = itens.map(f => { const gasto = AT.porItem[f.id]||0; if (f.env){ const prev = previsto(f, m); return {f, env:true, gasto, pago:false, lanc:null, prev, resta: Math.max(0, prev - gasto)}; }
-    const sp = MF ? L.filter(d=>d.sep===f.id && d.cartao && d.tipo==="gasto" && d.mes===d.fatura) : [];
-    if (sp.length){ const tot = r2(sum(sp, totalDe)); return {f, sep:true, pago:!!CM.sepPago, lanc:Object.assign({}, sp[0], {valor:tot}), gasto:tot, prev: previsto(f, m)}; }
-    const l = L.find(d=>d.fixo===f.id) || (gasto ? L.find(d=>AT.de.get(d.id)===f.id) : null); return {f, pago:!!l, lanc:l, gasto, prev: previsto(f, m)}; });
-  const fixosPend = sum(fixosStatus.filter(x=>!x.pago), x=>x.env ? x.resta : x.prev);
+    const l = L.find(d=>d.fixo===f.id) || (gasto ? L.find(d=>AT.de.get(d.id)===f.id) : null);
+    const via = !!l && MF && !!l.cartao && l.mes===l.fatura; // cobrado no cartão: só fica pago quando a fatura for paga
+    return {f, pago: !!l && (!via || CM.paga), lanc:l, gasto, prev: previsto(f, m), via}; });
+  const fixosPend = sum(fixosStatus.filter(x=>!x.pago && !x.via), x=>x.env ? x.resta : x.prev);
   let comprometido = 0;
   for (const c of S.cfg.cats) comprometido += Math.max(orc(c.id), porCat[c.id]||0);
   comprometido += (porCat.__sem||0);
   for (const k in porCat) if (k!=="__sem" && !catById(k)) comprometido += porCat[k];
-  if (MF) comprometido += Math.max(CM.devido, CM.pagoMes);
+  const fatResto = MF ? Math.max(0, r2(Math.max(CM.devido, CM.pagoMes) - sum(cartaoL, totalDe))) : 0; // parte da fatura que nenhuma compra explica
+  if (MF) comprometido += fatResto;
   const gOv = S.cfg.planos?.[m]?.__guardar;
   const metaMensal = gOv!=null ? +gOv||0 : sum(S.cfg.metas||[], x=>+x.aporteMensal||0);
   const aporteComp = Math.max(metaMensal, guardado);
@@ -1147,13 +1145,15 @@ function resumo(m){
   const guardarPend = Math.max(0, metaMensal - guardado);
   const caixaLivre = receitaPrev - saiu - guardado - fixosPend - cartPend - guardarPend - dzPend + ajuste;
   // planejamento do início do mês: recebo − fatura − contas − planejados − guardar = sobra para o dia a dia
+  const cardPorItem = {}; for (const d of cartaoL){ const id = AT.de.get(d.id); if (id) cardPorItem[id] = (cardPorItem[id]||0) + totalDe(d); }
+  const fatDentro = MF ? r2(sum(itens, f=>Math.min(cardPorItem[f.id]||0, previsto(f, m)))) : 0; // parte da fatura que já está dentro dos itens do plano
   const contasPrev = sum(itens, f=>previsto(f, m));
-  const cartPrev = MF ? Math.max(CM.devido, CM.pagoMes) : 0;
+  const cartPrev = MF ? Math.max(0, r2(Math.max(CM.devido, CM.pagoMes) - fatDentro)) : 0;
   const planSobra = receitaPrev - cartPrev - contasPrev - Math.max(metaMensal, guardado) - dz + ajuste;
   const porDia = restantes>0 ? Math.max(0, caixaLivre)/restantes : 0;
   const decorrido = m===atual ? dia/dim : (m<atual ? 1 : 0);
   return {L, gastos, receitas, aportes, entrou, saiu, guardado, receitaPrev, porCat, orc, dz, fixosStatus, fixosPend,
-          comprometido, metaMensal, sobraPrev: MF ? planSobra : sobraPrev, livre, restantes, porDia, decorrido, caixaLivre, ajuste, guardarPend, dzPend, AT, CM, cartPend, saiuCartao, contasPrev, cartPrev, planSobra};
+          comprometido, metaMensal, sobraPrev: MF ? planSobra : sobraPrev, livre, restantes, porDia, decorrido, caixaLivre, ajuste, guardarPend, dzPend, AT, CM, cartPend, saiuCartao, contasPrev, cartPrev, planSobra, gastosCx, cartaoL, fatResto, fatDentro};
 }
 
 function avisos(m, R){
@@ -1161,7 +1161,7 @@ function avisos(m, R){
   const atual = mesDe(hoje()); const dia = new Date().getDate();
   const revisar = R.L.filter(d=>d.revisar && d.tipo==="gasto");
   if (revisar.length) out.push({nivel:"warn", txt:`${revisar.length} ${revisar.length>1?"lançamentos":"lançamento"} sem categoria`, sub:"Um toque em cada e o app aprende para a próxima.", btn:"Revisar", act:"revisar"});
-  if (m===atual) for (const x of R.fixosStatus){ if (!x.pago && !x.env && +x.f.dia && +x.f.dia < dia) out.push({nivel:"crit", txt:`${x.f.nome} venceu dia ${x.f.dia}`, sub:`${fm(x.f.valor)} ainda sem lançamento.`, btn:"Paguei", act:"pagarFixo:"+x.f.id}); }
+  if (m===atual) for (const x of R.fixosStatus){ if (!x.pago && !x.via && !x.env && +x.f.dia && +x.f.dia < dia) out.push({nivel:"crit", txt:`${x.f.nome} venceu dia ${x.f.dia}`, sub:`${fm(x.f.valor)} ainda sem lançamento.`, btn:"Paguei", act:"pagarFixo:"+x.f.id}); }
   for (const c of S.cfg.cats){
     const o = R.orc(c.id), g = R.porCat[c.id]||0;
     if (o<=0 && g<=0) continue;
@@ -1266,7 +1266,7 @@ function viewEntrada(){
         : `<p class="note">Entre na sua conta do Claude para usar.</p>`}
     </div></div>`;
 }
-const VERSAO = "08/11 13:20";
+const VERSAO = "08/11 14:10";
 let ultimoErro = "";
 window.addEventListener("error", e => { ultimoErro = String(e.message||e.error||""); });
 window.addEventListener("unhandledrejection", e => { ultimoErro = String(e.reason?.message||e.reason||""); });
@@ -1414,14 +1414,14 @@ function viewMes(){
   </section>`;
 
   const fx = R.fixosStatus;
-  const totPrev = sum(fx, x=>x.prev) + (S.cfg.dizimo?.ativo ? R.dz : 0) + (R.CM ? Math.max(R.CM.devido, R.CM.pagoMes) : 0);
-  const totPago = sum(fx.filter(x=>x.pago), x=>x.lanc.valor) + (R.porCat.dizimo||0) + (R.CM ? R.CM.pagoMes : 0);
+  const totPrev = sum(fx, x=>x.prev) + (S.cfg.dizimo?.ativo ? R.dz : 0) + R.cartPrev;
+  const totPago = sum(fx.filter(x=>x.pago), x=>x.lanc.valor) + (R.porCat.dizimo||0) + (R.CM ? Math.min(R.cartPrev, R.CM.pagoMes) : 0);
   const nPend = fx.filter(x=>!x.pago).length;
   const porGrupo = {}; for (const x of fx){ const g = catGrupo(x.f.cat); (porGrupo[g] ||= []).push(x); }
   const linhaItem = x => { const late = !x.pago && m===atual && +x.f.dia && +x.f.dia < new Date().getDate(); const editing = memo.get("fx")===x.f.id; const editPago = memo.get("fxPago")===x.f.id;
     const dif = x.pago ? x.lanc.valor - x.prev : 0;
-    return `<div class="crow prev ${x.pago?"done":""} ${late?"late":""}" style="--cc:${corCat(x.f.cat)}"><button class="tick ${x.pago?"on":""}" data-act="${x.sep?"sepInfo:"+x.f.id:x.pago?"desfazer:"+x.lanc.id:"pagarFixo:"+x.f.id}" aria-label="${x.pago?"Desmarcar":"Marcar como pago"}">${x.pago?ck():""}</button>
-      <div class="nm">${esc(x.f.nome)}<small>${x.sep?"na fatura do cartão · ":""}${late?"venceu dia "+x.f.dia+" · ":(x.f.dia?"dia "+x.f.dia+" · ":"")}${x.pago?`previsto ${fm0(x.prev)}${Math.abs(dif)>=1?` · <span style="color:${dif>0?"var(--danger)":"var(--mint)"}">${dif>0?"+":"−"}${fm0(Math.abs(dif))}</span>`:""}`:esc(catNome(x.f.cat))}</small></div>
+    return `<div class="crow prev ${x.pago?"done":""} ${late?"late":""}" style="--cc:${corCat(x.f.cat)}"><button class="tick ${x.pago?"on":""}" data-act="${x.via?"sepInfo:"+x.f.id:x.pago?"desfazer:"+x.lanc.id:"pagarFixo:"+x.f.id}" aria-label="${x.pago?"Desmarcar":"Marcar como pago"}">${x.pago?ck():""}</button>
+      <div class="nm">${esc(x.f.nome)}<small>${x.via?"no cartão · ":""}${late?"venceu dia "+x.f.dia+" · ":(x.f.dia?"dia "+x.f.dia+" · ":"")}${x.pago?`previsto ${fm0(x.prev)}${Math.abs(dif)>=1?` · <span style="color:${dif>0?"var(--danger)":"var(--mint)"}">${dif>0?"+":"−"}${fm0(Math.abs(dif))}</span>`:""}`:esc(catNome(x.f.cat))}</small></div>
       ${editing?`<div class="inl"><input id="fxVal" inputmode="decimal" value="${x.prev?BRL.format(x.prev):""}"><button data-act="confirmaFixo:${x.f.id}">OK</button></div>`
        : editPago?`<div class="inl"><input id="fxPagoVal" inputmode="decimal" value="${BRL.format(x.lanc.valor)}"><button data-act="confirmaPago:${x.lanc.id}">OK</button></div>`
        : `<button class="v vbtn" data-act="${x.pago?"editarPago:"+x.f.id:"pagarComValor:"+x.f.id}" title="Toque para mudar o valor">${fm(x.pago?x.lanc.valor:x.prev)}</button>`}</div>`; };
@@ -1430,7 +1430,7 @@ function viewMes(){
   const fixPanel = `<section class="panel prevpanel"><div class="panel-h"><h2 style="--hc:var(--tang)">Previsto do mês</h2><button class="act" data-act="planejar:${m}">Planejar ${MES[+m.slice(5)-1]}</button></div>
     ${(fx.length||dzRow||(R.CM&&R.CM.devido)) ? `<div class="prev-sum"><div><b>${fm0(totPago)}</b> pagos de <b>${fm0(totPrev)}</b> previstos</div><span>${nPend?`${nPend} ${nPend>1?"itens":"item"} a pagar`:"tudo pago"}</span></div>
       <div class="prev-bar"><i style="width:${totPrev?Math.min(100,totPago/totPrev*100).toFixed(1):0}%"></i></div>
-      <div class="check">${R.CM && (R.CM.devido||R.CM.pagoMes) ? `<div class="crow prev ${R.CM.pend<=0.5?"done":""}" style="--cc:var(--violet)"><button class="tick ${R.CM.pend<=0.5?"on":""}" data-act="${R.CM.pend<=0.5 && R.CM.pagoMes?"desfazerCartao:"+m:"pagarCartao:"+m}" aria-label="Fatura paga">${R.CM.pend<=0.5?ck():""}</button><div class="nm">Fatura do cartão<small>vence em ${MES[+m.slice(5)-1]}${R.CM.pagoMes?` · paga ${fm0(R.CM.pagoMes)}`:""}${R.CM.sepTot?` · no banco ${fm0(R.CM.bruto)}, com ${fm0(R.CM.sepTot)} separados abaixo`:""}</small></div><button class="v vbtn" data-act="editarCartao:${m}">${fm(Math.max(R.CM.devido,R.CM.pagoMes))}</button></div>` : ""}${dzRow}${Object.keys(GRUPOS).filter(g=>porGrupo[g]).map(g=>`<div class="prev-g">${GRUPOS[g]}</div>${porGrupo[g].sort((a,b)=>(a.pago-b.pago)||((+a.f.dia||99)-(+b.f.dia||99))).map(linhaItem).join("")}`).join("")}</div>
+      <div class="check">${R.CM && (R.CM.devido||R.CM.pagoMes) ? `<div class="crow prev ${R.CM.pend<=0.5?"done":""}" style="--cc:var(--violet)"><button class="tick ${R.CM.pend<=0.5?"on":""}" data-act="${R.CM.pend<=0.5 && R.CM.pagoMes?"desfazerCartao:"+m:"pagarCartao:"+m}" aria-label="Fatura paga">${R.CM.pend<=0.5?ck():""}</button><div class="nm">Fatura do cartão<small>vence em ${MES[+m.slice(5)-1]}${R.CM.pagoMes?` · paga ${fm0(R.CM.pagoMes)}`:""}${R.fatDentro>0.5?` · no banco ${fm0(Math.max(R.CM.devido,R.CM.pagoMes))}, ${fm0(R.fatDentro)} já nos itens`:""}</small></div><button class="v vbtn" data-act="editarCartao:${m}">${fm(R.cartPrev)}</button></div>` : ""}${dzRow}${Object.keys(GRUPOS).filter(g=>porGrupo[g]).map(g=>`<div class="prev-g">${GRUPOS[g]}</div>${porGrupo[g].sort((a,b)=>(a.pago-b.pago)||((+a.f.dia||99)-(+b.f.dia||99))).map(linhaItem).join("")}`).join("")}</div>
       <p class="note">Toque no ✓ para marcar como pago pelo valor previsto. Toque no valor para pagar ou corrigir com outro valor. Escrever “energia 240” na barra também marca aqui.</p>`
       : `<p class="note">Aqui ficam os gastos que você já sabe que vêm: aluguel, água, energia, mercado, gasolina, assinaturas… Monte uma vez e todo mês é só marcar.</p>`}
     <button class="btn-line" data-act="planejar:${m}">${fx.length?"Planejar o mês / adicionar item":"Montar o previsto do mês"}</button>
@@ -1489,14 +1489,14 @@ function painelAcompanha(m, R){
     ${fs.length ? grupos.filter(([,xs])=>xs.length).map(([nome,xs])=>`<div class="grp"><div class="grp-h"><b>${nome}</b><span>${fm0(sum(xs,x=>x.env?x.gasto:(x.pago?(x.lanc?.valor??x.gasto):x.gasto)))} / ${fm0(sum(xs,x=>x.prev))}</span></div>${xs.map(linhaIt).join("")}</div>`).join("")
       : `<p class="note">Monte o plano do mês e cada item aparece aqui com quanto você já gastou nele.</p>`}
     ${R.AT.fora.length ? `<div class="grp"><div class="ac-it ${ab?"open":""}"><button class="env over" data-act="verItem:__fora" style="--cc:var(--muted)"><div class="env-top"><span class="env-name">Fora do plano</span><span class="env-v"><b>${fm0(R.AT.foraTot)}</b> · ${R.AT.fora.length} ${R.AT.fora.length>1?"gastos":"gasto"}</span></div></button>${ab?lista("__fora"):""}</div></div>` : ""}
-    ${(()=>{ const itensT = sum(Object.values(R.AT.porItem), v=>v), fat = R.CM ? R.CM.pagoMes : 0; return `<div class="ac-conf"><span>Gastos do mês nos itens <b>${fm0(itensT)}</b>${R.AT.foraTot?` + fora do plano <b>${fm0(R.AT.foraTot)}</b>`:""} = <b>${fm0(itensT + R.AT.foraTot)}</b></span>${fat?`<span>Fatura paga (compras do mês passado): <b>${fm0(fat)}</b> · fica fora dos itens</span>`:""}<span>Total que saiu no mês: <b>${fm0(R.saiu)}</b></span></div>`; })()}
+    ${(()=>{ const itensT = sum(Object.values(R.AT.porItem), v=>v), fat = R.CM ? Math.min(R.cartPrev, R.CM.pagoMes) : 0, noCartao = R.cartPend>0.5 ? Math.min(R.cartPend, sum(R.cartaoL, totalDe)) : 0; return `<div class="ac-conf"><span>Gastos do mês nos itens <b>${fm0(itensT)}</b>${R.AT.foraTot?` + fora do plano <b>${fm0(R.AT.foraTot)}</b>`:""} = <b>${fm0(itensT + R.AT.foraTot)}</b></span>${fat?`<span>Fatura paga (compras do mês passado): <b>${fm0(fat)}</b> · fica fora dos itens</span>`:""}${noCartao?`<span>Compras do cartão ainda não pagas (já contam nos itens): <b>${fm0(noCartao)}</b></span>`:""}<span>Total que saiu no mês: <b>${fm0(R.saiu)}</b></span></div>`; })()}
     <p class="note" style="margin-top:10px">Toque num item para ver os gastos dele. Toque num gasto para mudar o item em que ele entra; o app aprende para as próximas vezes.</p></section>`;
 }
 function folhaSeparar(m, manter){
   const R = resumo(m), CM = R.CM, sep = (S.cfg.separado||{})[m] || {}, MM = MES[+m.slice(5)-1];
   const linhas = [];
   if (CM && CM.pend>0.5) linhas.push({k:"fatura", g:"Pagar", nome:`Fatura do cartão (vence em ${MM})`, v:CM.pend});
-  for (const x of R.fixosStatus.filter(x=>!x.env && !x.pago && x.prev>0)) linhas.push({k:x.f.id, g: x.f.soMes ? "Planejados" : "Pagar", nome:x.f.nome, v:x.prev});
+  for (const x of R.fixosStatus.filter(x=>!x.env && !x.pago && !x.via && x.prev>0)) linhas.push({k:x.f.id, g: x.f.soMes ? "Planejados" : "Pagar", nome:x.f.nome, v:x.prev});
   if (R.guardarPend>0.5) linhas.push({k:"guardar", g:"Guardar", nome:`Guardar em ${(S.cfg.metas||[])[0]?.nome||"poupança"}`, v:R.guardarPend});
   for (const x of R.fixosStatus.filter(x=>x.env && x.resta>0.5)) linhas.push({k:x.f.id, g:"Dia a dia (envelopes)", nome:x.f.nome, v:x.resta});
   const total = sum(linhas, x=>x.v), feito = sum(linhas.filter(x=>sep[x.k]), x=>x.v), tem = r2(R.receitaPrev - R.saiu - R.guardado + R.ajuste), aReceber = r2(R.receitaPrev - R.entrou), sobra = r2(tem - total);
@@ -1556,10 +1556,10 @@ function blocoPlano(m, R){
   const MM = MES[+m.slice(5)-1], CM = R.CM, atual = mesDe(hoje());
   const contas = R.fixosStatus.filter(x=>!x.f.soMes && !x.env), plan = R.fixosStatus.filter(x=>x.f.soMes), envs = R.fixosStatus.filter(x=>x.env && !x.f.soMes);
   const linha = (nome, v, extra, cls="") => `<div class="ph-l ${cls}"><span>${nome}${extra?` <small>${extra}</small>`:""}</span><b class="num ${v<0?"neg":""}">${v<0?"−":""}${fm0(Math.abs(v))}</b></div>`;
-  const chipItem = x => `<span class="ph-it ${x.pago?"ok":""}"><button class="ph-tk" data-act="${x.sep?"sepInfo:"+x.f.id:x.pago?"desfazer:"+x.lanc.id:"pagarFixo:"+x.f.id}" aria-label="${x.pago?"Desmarcar":"Marcar como pago"}">${x.pago?ck():""}</button>${memo.get("fx")===x.f.id ? `<span class="inl">${esc(x.f.nome)} <input id="fxVal" inputmode="decimal" value="${x.prev?BRL.format(x.prev):""}"><button data-act="confirmaFixo:${x.f.id}">OK</button></span>` : memo.get("fxPago")===x.f.id && x.pago ? `<span class="inl">${esc(x.f.nome)} <input id="fxPagoVal" inputmode="decimal" value="${BRL.format(x.lanc.valor)}"><button data-act="confirmaPago:${x.lanc.id}">OK</button></span>` : `<button class="ph-nm" data-act="${x.pago?"editarPago:"+x.f.id:"pagarComValor:"+x.f.id}">${esc(x.f.nome)} <b>${fm0(x.pago?x.lanc.valor:x.prev)}</b></button>`}${x.f.soMes&&!x.pago?`<button class="ph-x" data-act="planTirarRap:${x.f.id}" aria-label="Tirar">×</button>`:""}</span>`;
+  const chipItem = x => `<span class="ph-it ${x.pago?"ok":""}"><button class="ph-tk" data-act="${x.via?"sepInfo:"+x.f.id:x.pago?"desfazer:"+x.lanc.id:"pagarFixo:"+x.f.id}" aria-label="${x.pago?"Desmarcar":"Marcar como pago"}">${x.pago?ck():""}</button>${memo.get("fx")===x.f.id ? `<span class="inl">${esc(x.f.nome)} <input id="fxVal" inputmode="decimal" value="${x.prev?BRL.format(x.prev):""}"><button data-act="confirmaFixo:${x.f.id}">OK</button></span>` : memo.get("fxPago")===x.f.id && x.pago ? `<span class="inl">${esc(x.f.nome)} <input id="fxPagoVal" inputmode="decimal" value="${BRL.format(x.lanc.valor)}"><button data-act="confirmaPago:${x.lanc.id}">OK</button></span>` : `<button class="ph-nm" data-act="${x.pago?"editarPago:"+x.f.id:"pagarComValor:"+x.f.id}">${esc(x.f.nome)} <b>${fm0(x.pago?x.lanc.valor:x.prev)}</b></button>`}${x.f.soMes&&!x.pago?`<button class="ph-x" data-act="planTirarRap:${x.f.id}" aria-label="Tirar">×</button>`:""}</span>`;
   const edCart = memo.get("fxCart")===m;
-  const cart = !CM ? "" : `<div class="ph-sec"><div class="ph-l"><span class="ph-tit"><button class="ph-tk ${CM.pend<=0.5 && (CM.pagoMes||CM.devido||CM.sepPago)?"on":""}" data-act="${CM.pend<=0.5 && (CM.pagoMes||CM.sepPago) ? "desfazerCartao:"+m : "pagarCartao:"+m}" aria-label="Fatura paga">${CM.pend<=0.5 && (CM.pagoMes||CM.sepPago) ? ck() : ""}</button>Fatura do cartão <small>vence em ${MM}${CM.pagoMes?` · paga ${fm0(CM.pagoMes)}`:""}${CM.manual?" · valor seu":CM.nAntes?` · sem ${fm0(CM.totAntes)} já acertados antes`:""}${CM.sepTot?` · no banco ${fm0(CM.bruto)}, com ${fm0(CM.sepTot)} nos itens abaixo`:""}</small></span>
-      ${edCart ? `<span class="inl"><input id="cartVal" inputmode="decimal" value="${CM.devido?BRL.format(CM.devido):""}" placeholder="0,00"><button data-act="confirmaCartao:${m}">OK</button></span>` : `<button class="ph-v neg num" data-act="editarCartao:${m}" title="Toque para mudar">−${fm0(Math.max(CM.devido, CM.pagoMes))}</button>`}</div>
+  const cart = !CM ? "" : `<div class="ph-sec"><div class="ph-l"><span class="ph-tit"><button class="ph-tk ${CM.pend<=0.5 && (CM.pagoMes||CM.devido||CM.sepPago)?"on":""}" data-act="${CM.pend<=0.5 && (CM.pagoMes||CM.sepPago) ? "desfazerCartao:"+m : "pagarCartao:"+m}" aria-label="Fatura paga">${CM.pend<=0.5 && (CM.pagoMes||CM.sepPago) ? ck() : ""}</button>Fatura do cartão <small>vence em ${MM}${CM.pagoMes?` · paga ${fm0(CM.pagoMes)}`:""}${CM.manual?" · valor seu":CM.nAntes?` · sem ${fm0(CM.totAntes)} já acertados antes`:""}${R.fatDentro>0.5?` · no banco ${fm0(Math.max(CM.devido,CM.pagoMes))}, ${fm0(R.fatDentro)} já nos itens`:""}</small></span>
+      ${edCart ? `<span class="inl"><input id="cartVal" inputmode="decimal" value="${CM.devido?BRL.format(CM.devido):""}" placeholder="0,00"><button data-act="confirmaCartao:${m}">OK</button></span>` : `<button class="ph-v neg num" data-act="editarCartao:${m}" title="Toque para mudar">−${fm0(R.cartPrev)}</button>`}</div>
       ${!CM.devido && !CM.pagoMes && !CM.fi.itens.length ? `<small class="ph-dica">Toque no valor e digite quanto vem a fatura, ou mande a fatura para o app calcular.</small>` : ""}
       ${CM.adiantarTot ? `<div class="ph-l"><span class="ph-tit"><button class="ph-tk ${CM.adiantar<=0.5?"on":""}" data-act="${CM.adiantar<=0.5?"desfazerAdiantar:"+m:"adiantarCartao:"+m}" aria-label="Já adiantei">${CM.adiantar<=0.5?ck():""}</button>Cartão deste mês para adiantar <small>${fm0(CM.adiantarTot)} em compras de ${MM}, já contadas nos gastos${CM.adiantadoMes?` · adiantado ${fm0(CM.adiantadoMes)}`:""} · não voltam na fatura de ${MES[+CM.prox.slice(5)-1]}</small></span><b class="num">${CM.adiantar>0.5?fm0(CM.adiantar):"ok"}</b></div>` : ""}</div>`;
   const totContas = sum(contas, x=>x.pago ? x.lanc.valor : x.prev), totPlan = sum(plan, x=>x.pago ? x.lanc.valor : x.prev), totEnv = sum(envs, x=>x.prev);
@@ -1618,9 +1618,9 @@ function painelCartao(m){
   const jaContou = sum(Object.entries(atual.porMes).filter(([k])=>k!==m), ([,v])=>v), contaAgora = atual.porMes[m]||0;
   return `<section class="panel"><div class="panel-h"><h2 style="--hc:var(--violet)">${/^cart[aã]o$/i.test(cc.nome||"")||!cc.nome ? "Cartão" : "Cartão "+esc(cc.nome)}</h2><button class="act" data-act="cartaoExtrato">Ver compras</button></div>
     <div class="cards2">
-      <div class="fat"><div class="eyebrow">A pagar · fatura que vence em ${MES[+m.slice(5)-1]}</div><div class="fat-v">${fm(atual.falta)}</div>${atual.pago?`<p class="note" style="margin:0">fatura de ${fm0(atual.total)} · já pago ${fm0(atual.pago)}</p>`:""}${sepNota(CA)}${atual.adiantar?avisoAdiantar(atual.adiantar, m):""}${atual.total?`<button class="linkbtn" data-act="acertarFatura:${m}">Marcar o que já foi pago</button>`:""}
+      <div class="fat"><div class="eyebrow">A pagar · fatura que vence em ${MES[+m.slice(5)-1]}</div><div class="fat-v">${fm(atual.falta)}</div>${atual.pago?`<p class="note" style="margin:0">fatura de ${fm0(atual.total)} · já pago ${fm0(atual.pago)}</p>`:""}${fatNota(m)}${btnZerada(m, atual.falta, atual.total)}${atual.adiantar?avisoAdiantar(atual.adiantar, m):""}${atual.total?`<button class="linkbtn" data-act="acertarFatura:${m}">Marcar o que já foi pago</button>`:""}
         <p class="note">${!atual.total ? "Nenhuma compra registrada nela." : modoFatura() ? "É um item do plano do mês: marque como paga lá em cima quando pagar." : `${fm0(contaAgora)} pesam neste mês${jaContou?` · ${fm0(jaContou)} já tinham pesado no mês da compra`:""}.`}</p></div>
-      <div class="fat prox"><div class="eyebrow">A pagar · próxima fatura, vence em ${MES[+addMes(m,1).slice(5)-1]}</div><div class="fat-v">${fm(prox.falta)}</div>${prox.pago?`<p class="note" style="margin:0">fatura de ${fm0(prox.total)} · adiantado ${fm0(prox.pago)}</p>`:""}${sepNota(CP)}${prox.adiantar?avisoAdiantar(prox.adiantar, addMes(m,1)):""}${prox.total?`<button class="linkbtn" data-act="acertarFatura:${addMes(m,1)}">Marcar o que já foi pago / adiantar</button>`:""}
+      <div class="fat prox"><div class="eyebrow">A pagar · próxima fatura, vence em ${MES[+addMes(m,1).slice(5)-1]}</div><div class="fat-v">${fm(prox.falta)}</div>${prox.pago?`<p class="note" style="margin:0">fatura de ${fm0(prox.total)} · adiantado ${fm0(prox.pago)}</p>`:""}${fatNota(addMes(m,1))}${btnZerada(addMes(m,1), prox.falta, prox.total)}${prox.adiantar?avisoAdiantar(prox.adiantar, addMes(m,1)):""}${prox.total?`<button class="linkbtn" data-act="acertarFatura:${addMes(m,1)}">Marcar o que já foi pago / adiantar</button>`:""}
         <p class="note">${!prox.total ? "Mande a fatura aberta para ir acompanhando." : modoFatura() ? `Entra no plano de ${MES[+addMes(m,1).slice(5)-1]} como um item só. Compras do dia a dia deste mês não entram aqui: você adianta e elas já contam neste mês.` : `<b>${fm0(desteMesNaProx)}</b> são gastos deste mês (comida e dia a dia), já descontados do seu “livre”. ${fm0(fica)} ficam para o mês que vem.`}</p></div>
     </div>
     <div class="btns"><button class="btn" data-act="abrirImport">Mandar fatura</button>${atual.itens.length?`<button class="btn" data-act="analisarFatura:${m}">Analisar fatura de ${MES[+m.slice(5)-1]}</button>`:""}${prox.itens.length?`<button class="btn" data-act="analisarFatura:${addMes(m,1)}">Analisar fatura de ${MES[+addMes(m,1).slice(5)-1]}</button>`:""}</div></section>`;
@@ -2528,9 +2528,9 @@ async function acao(a, el){
     case "editarCartao": memo.set("fxCart", arg); render(); setTimeout(()=>{ const i = $("#cartVal"); i?.focus(); i?.select(); },0); return;
     case "confirmaCartao": { const txt = ($("#cartVal")?.value||"").trim(); memo.delete("fxCart"); (S.cfg.planos ||= {}); (S.cfg.planos[arg] ||= {});
       if (!txt) delete S.cfg.planos[arg].__cartao; else S.cfg.planos[arg].__cartao = parseValor(txt)||0; salvarCfg(true); render(); return; }
-    case "pagarCartao": { const CM = cartaoDoMes(arg); const v = r2(CM.pend + (CM.sepPago ? 0 : CM.sepTot)); if (!(v>0)){ memo.set("fxCart", arg); render(); setTimeout(()=>$("#cartVal")?.focus(),0); toast("Digite quanto veio a fatura."); return; }
+    case "pagarCartao": case "faturaZerada": { const CM = cartaoDoMes(arg); const v = CM.pend; if (!(v>0)){ if (cmd==="faturaZerada"){ toast(CM.devido||CM.pagoMes ? "Essa fatura já está zerada." : "Ainda não há compras nessa fatura."); return; } memo.set("fxCart", arg); render(); setTimeout(()=>$("#cartVal")?.focus(),0); toast("Digite quanto veio a fatura."); return; }
       const id = uid(); await gravarLanc(id, {tipo:"pagfatura", valor:v, desc:"Fatura do cartão", fatura:arg, cat:null, data: arg===mesDe(hoje()) ? hoje() : dataNoMes(arg, (S.cfg.cartao||{}).vencimento||10), origem:"checklist", criado:Date.now()});
-      toast(`Fatura de ${MES[+arg.slice(5)-1]}: ${fm(v)} paga${CM.sepTot&&!CM.sepPago?` · inclui ${fm0(CM.sepTot)} dos itens separados`:""}`, async()=>{ await apagarLanc(id); toast("Desfeito"); }); return; }
+      toast(`Fatura de ${MES[+arg.slice(5)-1]} paga: ${fm(v)} saíram do seu saldo`, async()=>{ await apagarLanc(id); toast("Desfeito"); }); return; }
     case "desfazerCartao": { const ids = [...S.lanc.entries()].filter(([,d])=>d.tipo==="pagfatura" && d.fatura===arg && mesDe(d.data)===arg).map(([id,d])=>[id,d]);
       for (const [id] of ids) await apagarLanc(id); toast("Pagamento da fatura desmarcado", async()=>{ for (const [id,d] of ids) await gravarLanc(id, d); }); return; }
     case "adiantarCartao": case "jaAdiantei": { const m0 = cmd==="jaAdiantei" ? addMes(arg,-1) : arg; const CM = cartaoDoMes(m0); const v = cmd==="jaAdiantei" ? r2(sum([...S.lanc.values()].filter(d=>d.aPagar && d.fatura===arg), totalDe)) : CM.adiantar;
@@ -2787,13 +2787,11 @@ function itemSep(nome, venc, valor, ctx, semId){
   if (!f){ f = {id:"f"+uid(), nome, valor:v, dia:+((S.cfg.cartao||{}).vencimento)||0, cat:categorizar(nome)||"outros", soMes:venc}; (S.cfg.fixos ||= []).push(f); ctx.novos.push(f.id); }
   const ja = ctx.acum.has(f.id) ? (+pl[f.id]||0) : r2(sum([...S.lanc.entries()].filter(([id,d])=>id!==semId && d.sep===f.id && d.cartao && d.fatura===venc), ([,d])=>totalDe(d)));
   salva(pl, f.id); pl[f.id] = r2(ja + v); ctx.acum.add(f.id);
-  if (pl.__cartao!=null){ salva(pl, "__cartao"); pl.__cartao = Math.max(0, r2((+pl.__cartao||0) - v)); }
   return f;
 }
 function desfazSep(d, id){
   const f = (S.cfg.fixos||[]).find(x=>x.id===d.sep); if (!f) return;
   const venc = d.fatura, pl = ((S.cfg.planos ||= {})[venc] ||= {}), v = totalDe(d);
-  if (pl.__cartao!=null) pl.__cartao = r2((+pl.__cartao||0) + v);
   const outros = [...S.lanc.entries()].some(([oid,o])=>oid!==id && o.sep===f.id && o.fatura===venc);
   if (outros) pl[f.id] = Math.max(0, r2((+pl[f.id]||0) - v));
   else { delete pl[f.id]; if (f.soMes) S.cfg.fixos = S.cfg.fixos.filter(x=>x.id!==f.id); }
@@ -2803,7 +2801,13 @@ function desfazItensSep(ctx){
   for (const [obj,key,val] of ctx.antes.values()){ if (val===undefined) delete obj[key]; else obj[key] = val; }
   salvarCfg(true);
 }
-const sepNota = C => C && C.sepTot>0 ? `<p class="note sep-note">No banco: <b>${fm0(C.bruto)}</b> no total. ${fm0(C.sepTot)} (${esc(C.sepNomes.join(", "))}) já estão separados nos itens do previsto e não entram neste valor.</p>` : "";
+function fatNota(venc){
+  if (!modoFatura()) return ""; const R = resumo(venc), CM = R.CM; if (!CM || R.fatDentro<0.5) return "";
+  const por = {}; for (const d of R.cartaoL){ const id = R.AT.de.get(d.id); if (!id) continue; const n = (S.cfg.fixos||[]).find(f=>f.id===id)?.nome; if (n) por[n] = (por[n]||0) + totalDe(d); }
+  const txt = Object.entries(por).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n,v])=>`${esc(n)} ${fm0(v)}`).join(", ");
+  return `<p class="note sep-note">No banco: <b>${fm0(Math.max(CM.devido, CM.pagoMes))}</b>. ${fm0(R.fatDentro)} já abatem nos itens do plano (${txt}), então não contam duas vezes.</p>`;
+}
+const btnZerada = (venc, falta, total) => falta>0.5 ? `<button class="btn solid" style="margin-top:8px" data-act="faturaZerada:${venc}">Fatura paga · zerada</button>` : total ? `<p class="note" style="margin:6px 0 0"><b style="color:var(--mint,#12B07F)">✓ Fatura paga</b> · <button class="linkbtn" data-act="desfazerCartao:${venc}">desfazer</button></p>` : "";
 function sepUi(r, i){
   if (!(r.cartao && r.tipo==="gasto" && modoFatura()) || r.pago || (!r._on && !r._dupId)) return "";
   return r.sep ? `<div class="lc-sep on"><span>Item do previsto</span><input type="text" data-lote="${i}.sepNome" value="${esc(r.sep.nome)}" aria-label="Nome do item"><button type="button" data-act="loteSep:${i}" aria-label="Não separar">✕</button></div>`
@@ -2818,7 +2822,7 @@ async function autoFixos(){
   const m = mesDe(hoje()), dia = new Date().getDate();
   const R = resumo(m); let n = 0;
   for (const x of R.fixosStatus){
-    if (x.pago || x.sep || x.f.varia || !(+x.f.valor) || !(+x.f.dia) || +x.f.dia > dia || S.cfg.pulados[`${x.f.id}-${m}`]) continue;
+    if (x.pago || x.via || x.f.varia || !(+x.f.valor) || !(+x.f.dia) || +x.f.dia > dia || S.cfg.pulados[`${x.f.id}-${m}`]) continue;
     try{ await pagarFixo(x.f, +x.f.valor, m); n++; }catch(e){}
   }
   if (n) toast(`${n} ${n>1?"contas fixas lançadas":"conta fixa lançada"} automaticamente`);
